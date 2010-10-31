@@ -99,7 +99,7 @@ class App
       opts.on('-k', '--kind KIND', String)      { |v| @options.kind = v }
       opts.on('-m', '--description M', String)      { |v| @options.description = v }
       opts.on('-o', '--options OPTSTRING', String) do |v|
-        @options.opts = Hash[v.split(/\, ?/).map{|a| a.split /\: ?/ }]
+        @options.opts = v
       end
       opts.parse!(@arguments) rescue return false
       
@@ -162,7 +162,7 @@ class App
 				  req_file.puts "\nclass #{as_class_name @arguments[1]} < MyExperiment\n\t\nend"
 				end
 				File.open(dir + "/config.yaml", "w") do |f|
-				  f << "---\nexperiment:\n  development:\n  dice:\n"
+				  f << "---\nexperiment:\n  development:\n  compute:\n"
         end
         
       elsif @arguments.first == "new" # generate a new project
@@ -173,8 +173,7 @@ class App
           Dir.mkdir(dir + "/" + d)
         end
         basedir = File.dirname(__FILE__) + "/.."
-        FileUtils::cp File.join(basedir, "lib/experiment/generator/config.rb"), File.join(dir, "config")
-        File.open(File.join(dir, "config", "config.yml"), "w") do |f|
+        File.open(File.join(dir, "config", "config.yaml"), "w") do |f|
           f << "---\nenvironments:\n  development:\n  compute:\n"
         end
         
