@@ -1,6 +1,11 @@
 class MyExperiment < Experiment::Base
   
-  def run_the_experiment(output)
+  def test_data
+    # TODO: Specify an array of all the test data. 
+    # It will be split up automatically for you accross Cross-validations
+  end
+  
+  def run_the_experiment(data, output)
     # TODO: Define how you will run the experiment
     # Remeber, each seperate experiment inherits from this base class and includes
     # it's own files, so this should be a rather generic implementation

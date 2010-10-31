@@ -176,7 +176,9 @@ class App
         File.open(File.join(dir, "config", "config.yaml"), "w") do |f|
           f << "---\nenvironments:\n  development:\n  compute:\n"
         end
-        
+        File.open(File.join(dir, ".gitignore"), "w") do |f|
+          f << "tmp/*"
+        end
         FileUtils::cp File.join(basedir, "lib/experiment/generator/readme_template.txt"), File.join(dir, "README")
         FileUtils::cp File.join(basedir, "lib/experiment/generator/Rakefile"), File.join(dir, "Rakefile")
         FileUtils::cp File.join(basedir, "lib/experiment/generator/experiment_template.rb"), File.join(dir, "experiments", "experiment.rb")
@@ -185,7 +187,6 @@ class App
 			  puts "  " + Dir["./experiments/*"].map{|a| File.basename(a) }.join(", ")
 			elsif @arguments.first == "report"
 			  dir = "./report/"
-			  
         File.open(dir + "method.mmd", "w") do |f|
           f.puts "# Methods #"
           Dir["./experiments/*/*.rb"].each do |desc|
@@ -202,7 +203,30 @@ class App
             end
           end
         end
-        
+        require 'csv'
+        require "yaml"
+        require File.dirname(__FILE__)+"/../lib/experiment/stats"
+        CSV.open(dir + "/data.csv", "w") do |csv|
+          data = {}
+          Dir["./results/*/results.yaml"].each do |res|
+            d = YAML::load_file(res)
+            da = {}
+            d.each do |k, vals|
+              da[k.to_s + " mean"], da[k.to_s + " sd"] = Stats::mean(vals), Stats::standard_deviation(vals)
+              vals.each_with_index do |v, i|
+                da[k.to_s + " cv:" + i.to_s] = v
+              end
+            end
+            array_merge(data, da)
+          end
+          data.keys.map do |key| 
+      		  # calculate stats
+      		  a = data[key]
+      		  [key] + a
+    		  end.transpose.each do |row|
+    		    csv << row
+    		  end
+        end
 			elsif @arguments.shift == "run"
 			  require File.dirname(__FILE__) + "/../lib/experiment/base"
 			  require "experiments/experiment"
@@ -217,6 +241,15 @@ class App
 			end
       
     end
+    
+    
+    private
+    def array_merge(h1, h2)
+  	  h2.each do |key, value|
+  	   h1[key] ||= []
+  	   h1[key] << value
+  	  end
+	  end
     
     def as_class_name(str)
       str.split(/[\_\-]+/).map(&:capitalize).join
