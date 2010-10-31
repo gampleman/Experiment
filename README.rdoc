@@ -106,7 +106,7 @@ Flexible, eh?
 
 == Cross Validation
 
-Cross validation (CV) is one of the most crucial research methods in CS and AI. For that reason it is built right in. You specify how many CVs you want to run using the --cv flag and your data is automatically split up for you.
+Cross validation (CV) is one of the most crucial research methods in CS and AI. For that reason it is built right in. You specify how many CVs you want to run using the --cv flag and your data is automatically split up for you and the experiment is run for each CV with the appropriate data.
 
 == Reporting Results
 
