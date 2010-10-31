@@ -46,3 +46,72 @@ Also notice that the description you provided is stored as a comment in that fil
 
 == Running the experiment
 
+Once you make the desired changes you can run the experiment with:
+
+    $ experiment run my_condition --cv 5
+    
+This will create a directory in `results` named something like `my_condition-cv5-46424`. The naming convention is to give the condition name, a summary of the configuration used, and a shortened timestamp to differentiate reruns of the same experiment.
+
+The experimental results and benchmarks will be written to this directory with a specification yaml file that details all conditions of the experiment.
+
+Please notice that you can provide several different conditions to the run command and it will run them sequentially, all with required options.
+
+== Configuration
+
+So far we have been talking mainly about variations in the source code of the experiments. But what if you just want to tweak a few parameters? There is always the almighty *Config* class to the rescue. 
+
+    Experiment::Config[:my_config_variable] # anywhere in your code
+    
+Where does this come from? You have a config directory containing a `config.yaml` file. This file contains several environments. The idea is that you might want to tweak your options differently when running on your laptop then when running on a university supercomputer ;)
+
+`development` is the default environment, you can set any other with the `--env` option.
+
+Notice that also when generating an experimental condition it also gets its own config.yaml file. This file overrides the main config file so you can introduce in condition specific options.
+
+And finally when running an experiment you can use the -o or --options option to override any config you want.
+
+Let me give you an example. Your main config file looks like this:
+
+    environments:
+      development:
+        ref_dir: /Users/kubowo/Desktop/points-vals
+        master_dir: /Users/kubowo/Desktop/points-vals/s014
+        alpha: 0.4
+      compute:
+        ref_dir: /afs/group/DB/points
+        master_dir: /afs/group/DB/points/s145
+        alpha: 0.4
+
+Your `experiments/my_condition/config.yaml` looks like this:
+
+    experiment:
+      development:
+        alpha: 0.5
+      compute:
+        alpha: 0.6
+
+And you run the experiment with
+
+    $ experiment run my_condition --env compute -o "master_dir: /Users/kubowo/Desktop/points-vals/s015"
+    
+Then your final config will look like this:
+
+    { :ref_dir => "/afs/group/DB/points", 
+      :master_dir => "/Users/kubowo/Desktop/points-vals/s015", 
+      :alpha => 0.6 }
+
+Flexible, eh?
+
+== Reporting Results
+
+    $ experiment report
+
+Surprise, surprise. This will create two files in your `report` directory (BTW, this directory is also meant for you to store your report or paper draft). The first is methods.mmd. This takes all the stuff you wrote in the beginnings of your experimental condition files and creates a multi-markdown (http://fletcherpenney.net/multimarkdown/) file out of them (I chose multi-markdown for it's LaTEX support and also it is directly importable into Scrivener, my writing application of choice, available at http://www.literatureandlatte.com/scrivener.html).  
+
+The second file created is the `data.csv` file which contains the data from all your experiments. It should be importable to Numbers, Excel even Matlab for further analysis and charting.
+
+== Misc
+
+So that's pretty much the gist of experiment. There's a few other features (and a few soon to come to a gem near you ;-) 
+
+Also check out the RDocs: http://rdoc.info/github/gampleman/Experiment/master/frames

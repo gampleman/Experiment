@@ -10,20 +10,19 @@ require 'benchmark'
 
 module Experiment
   class Base
-    attr_reader :dir, :current_cv, :cvs, :options
+    attr_reader :dir, :current_cv, :cvs
     
-  	def initialize(experiment, env, out = true)
+  	def initialize(experiment, options, env)
   		@experiment = experiment
   		
-  		Experiment::Config::load(experiment, env)
+  		Experiment::Config::load(experiment, options, env)
   		require "./experiments/#{experiment}/#{experiment}"
   		@abm = []
   	end
     
     # runs the whole experiment
-  	def run!(cv, options)
+  	def run!(cv)
   		@cvs = cv || 1
-      @options = options
       @results = []
   		Notify.print "Running #{@experiment} "
 
@@ -64,7 +63,7 @@ module Experiment
     # Writes a yaml specification of all the options used to run the experiment
   	def specification!
   		File.open(@dir + '/specification.yaml', 'w' ) do |out|
-  			YAML.dump({:name => @experiment, :date => Time.now, :options => @options, :cross_validations => @cvs}, out )
+  			YAML.dump({:name => @experiment, :date => Time.now, :configuration => Experiment::Config.to_h, :cross_validations => @cvs}, out )
   		end
   	end
     
