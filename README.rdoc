@@ -1,0 +1,48 @@
+= Experiment
+* http://github.com/gampleman/experiment
+
+== What's it about?
+
+Experiment is a ruby library and environment for running scientific experiments (eg. AI, GA...), especially good for experiments in optimizing results by variations in algorithm or parameters.
+
+== Installation
+
+    $ sudo gem install experiment
+
+== Getting started
+
+Experiment is modeled after rails and the workflow should be recognizable enough.
+
+First start by generating your project:
+
+    $ experiment new my_project
+
+This will create several files and directories. We will shortly introduce you to these.
+
+First off is the `app` directory. This is where a basic implementation of what you mean to do. You can write your code however you want, just make sure the code is well structured - you will be overriding this later in your experiments.
+
+== Setting up an experiment
+
+Experiments are set up in the experiments directory. The first thing you need to do is define what consist an experiment in your case. For this open up the file `experiments/experiment.rb`. You will notice that this file contains a bunch of comments and a stub letting you easily understand what to do.
+
+For a typical experiment you will need to do some setup work (eg. initialize your classes, calculate parametres, etc.), run the experiment and maybe do cleanup (remove temp. files).
+
+You do all this work in the `run_the_experiment` method. Remember to pass the raw output via `<<` to the `output` variable and wrap the experiment in a benchmark block. This will be automatically saved to the results directory for further analysis.
+
+Next you may want to analyze the data you got. For that there is the `analyze_result!` method which has 2 arguments. One is the raw data file that was output by your code and the other is the path to an expected output file (this can be very rich in detail, ideal for confusion matrices and the like). The method should return a hash of summary results (eg. `:total_performance => 16`).
+
+All of this will be also saved to disk and available for later analysis.
+
+== Creating an experimental condition
+
+Now to get to making different conditions and measuring them. First call
+
+    $ experiment generate my_condition -m "This should be a description of what you plan to\
+     do, maybe including a hypothesis. Don't worry, you can edit this later."
+    
+This will create a directory in `experiments` based on the name you provide (in this case `experiments/my_condition`). In this directory you will find a class that inherits from the experiment you defined earlier and that it also explicitly requires all the files you wrote in `app`. This gives you the flexibility to delete any of these includes and create a copy of that file to modify it. It also allows you to override the experiment logic as needed.
+
+Also notice that the description you provided is stored as a comment in that file. You can expand your hypothesis as you work on the file and it will be included in your report automatically.
+
+== Running the experiment
+

@@ -1,0 +1,17 @@
+require 'rake'
+require 'rake/testtask'
+require "rake/rdoctask"
+
+task :default => [:test]
+
+Rake::TestTask.new do |t|
+   t.libs += ["app/input", "app/dtw", "app/models", "."]
+   t.test_files = FileList['test/unit/*.rb']
+   t.verbose = true
+end
+
+Rake::RDocTask.new do |rd|
+    rd.main = "README"
+    rd.rdoc_files.include("README", "app/**/*.rb")
+		rd.rdoc_dir = "doc"
+end

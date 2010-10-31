@@ -1,0 +1,15 @@
+History.txt
+Manifest.txt
+PostInstall.txt
+README.rdoc
+Rakefile
+lib/experiment.rb
+lib/experiment/generator/config.rb
+lib/experiment/generator/readme_template.txt
+lib/experiment/generator/experiment_template.rb
+lib/experiment/generator/Rakefile
+lib/experiment/base.rb
+lib/experiment/notify.rb
+test/test_experiment.rb
+test/test_helper.rb
+bin/experiment
