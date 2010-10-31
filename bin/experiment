@@ -209,9 +209,11 @@ class App
 				@arguments.each do |exp|
 				  require "./experiments/#{exp}/#{exp}"
 				  cla = eval(as_class_name(exp))
-					experiment = cla.new exp, @options.env
-					experiment.run!(@options.cv, @options.opts)
+					experiment = cla.new exp, @options.opts, @options.env
+					experiment.run! @options.cv
 				end
+			else
+			  output_usage
 			end
       
     end

@@ -29,6 +29,8 @@ For a typical experiment you will need to do some setup work (eg. initialize you
 
 You do all this work in the `run_the_experiment` method. Remember to pass the raw output via `<<` to the `output` variable and wrap the experiment in a benchmark block. This will be automatically saved to the results directory for further analysis.
 
+The `test_data` method lets you specify an array of data points that you want split for cross-validation (see below). This will be passed to in `run_the_experiment` in the input variable.
+
 Next you may want to analyze the data you got. For that there is the `analyze_result!` method which has 2 arguments. One is the raw data file that was output by your code and the other is the path to an expected output file (this can be very rich in detail, ideal for confusion matrices and the like). The method should return a hash of summary results (eg. `:total_performance => 16`).
 
 All of this will be also saved to disk and available for later analysis.
@@ -101,6 +103,10 @@ Then your final config will look like this:
       :alpha => 0.6 }
 
 Flexible, eh?
+
+== Cross Validation
+
+Cross validation (CV) is one of the most crucial research methods in CS and AI. For that reason it is built right in. You specify how many CVs you want to run using the --cv flag and your data is automatically split up for you.
 
 == Reporting Results
 

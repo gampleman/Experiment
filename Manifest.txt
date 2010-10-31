@@ -4,7 +4,8 @@ PostInstall.txt
 README.rdoc
 Rakefile
 lib/experiment.rb
-lib/experiment/generator/config.rb
+lib/experiment/config.rb
+lib/experiment/stats.rb
 lib/experiment/generator/readme_template.txt
 lib/experiment/generator/experiment_template.rb
 lib/experiment/generator/Rakefile

@@ -1,12 +1,7 @@
 require File.dirname(__FILE__) + "/notify"
-require "./config/config"
+require File.dirname(__FILE__) + "/stats"
+require File.dirname(__FILE__) + "/config"
 require 'benchmark'
-
-#if RUBY_VERSION > "1.9"
-#  require 'csv'
-#else
-  require 'fastercsv'
-#end
 
 module Experiment
   class Base
@@ -23,9 +18,9 @@ module Experiment
     # runs the whole experiment
   	def run!(cv)
   		@cvs = cv || 1
-      @results = []
+      @results = {}
   		Notify.print "Running #{@experiment} "
-
+      split_up_data
   		write_dir!
   		specification!
 
@@ -33,16 +28,15 @@ module Experiment
   			@bm = []
   			@current_cv = cv_num
   			File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
-  			    run_the_experiment(output)
+  			    run_the_experiment(@data[cv_num], output)
   			end
-  			@results << analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt").merge({:cv => cv_num})
+  			array_merge @results, analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt")
   			write_performance!
   			Notify.print "."
   		end
   		summarize_performance!
   		summarize_results! @results
   		Notify.print result_line
-
   	end
 
 
@@ -55,8 +49,7 @@ module Experiment
   	
     # Creates the results directory for the current experiment
   	def write_dir!
-  	  opts = @options.to_s
-  		@dir = "./results/#{@experiment}-#{opts}-cv#{@cvs}-#{Time.now.to_i.to_s[4..9]}"
+  		@dir = "./results/#{@experiment}-cv#{@cvs}-#{Time.now.to_i.to_s[4..9]}"
   		Dir.mkdir @dir
   	end
     
@@ -91,18 +84,66 @@ module Experiment
     
     # creates a summary of the results and writes to 'all.csv'
   	def summarize_results!(results)
-  	  
-  	  results = results.reduce({}) do |tot, res|
-  	   cv = res.delete :cv
-  	   tot.merge Hash[res.to_a.map {|a| ["cv_#{cv}_#{a.first}".to_sym, a.last]}]
-  	  end
-  	  FasterCSV.open("./results/all.csv", "a") do |csv|
-  	    csv << results.to_a.sort_by{|a| a.first.to_s}.map(&:last)
-  	  end
+  	  File.open(@dir + '/results.yaml', 'w' ) do |out|
+  			YAML.dump(results, out )
+  		end
+  		
+  		# create an array of arrays
+  		res = results.keys.map do |key| 
+  		  # calculate stats
+  		  a = results[key]
+  		  [key] + a + [Stats::mean(a), Stats::standard_deviation(a)]
+		  end
+		  
+		  ls = results.keys.map{|v| v.to_s.length }
+  		
+  		ls = ["Standard Deviation".length] + ls
+  		res = [["cv"] + (1..cvs).to_a.map(&:to_s) + ["Mean", "Standard Deviation"]] + res
+  		
+  		out = ""
+  		res.transpose.each do |col|
+  		  col.each_with_index do |cell, i|
+  		    l = ls[i]
+  		    out << "| "
+  		    if cell.is_a?(String) || cell.is_a?(Symbol)
+  		      out << sprintf("%#{l}s", cell)
+		      else
+		        out << sprintf("%#{l}.3f", cell)
+		      end
+		      out << " "
+  		  end
+  		  out << "|\n"
+  		end
+  		File.open(@dir + "/summary.mmd", 'w') do |f|
+  		  f << "## Results for #{@experiment} ##\n\n"
+  		  f << out
+		  end
+  	  #results = results.reduce({}) do |tot, res|
+  	  # cv = res.delete :cv
+  	  # tot.merge Hash[res.to_a.map {|a| ["cv_#{cv}_#{a.first}".to_sym, a.last]}]
+  	  #end
+  	  #FasterCSV.open("./results/all.csv", "a") do |csv|
+  	  #  csv << results.to_a.sort_by{|a| a.first.to_s}.map(&:last)
+  	  #end
   	end
   	
   	def result_line
-  	 "Done\n"
+  	 " Done\n"
+  	end
+  	
+  	# A silly method meant to be overriden.
+  	# should return an array, which will be then split up for cross-validating
+  	def test_data
+  	  (1..cvs).to_a
+  	end
+  	
+  	def split_up_data
+  	  @data = []
+  	  test_data.each_with_index do |item, i|
+  	    @data[i % cvs] ||= []
+  	    @data[i % cvs] << item
+  	  end
+  	  @data
   	end
   	
   	private
@@ -110,5 +151,12 @@ module Experiment
   	def performance_f(&block) # just a simple wrapper to make code a little DRYer
   		File.open(@dir+"/performance_table.txt", "a", &block) 
   	end
+  	
+  	def array_merge(h1, h2)
+  	  h2.each do |key, value|
+  	   h1[key] ||= []
+  	   h1[key] << value
+  	  end
+	  end
   end
 end

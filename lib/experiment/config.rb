@@ -8,7 +8,7 @@ module Experiment
 	    # overriden by the experimental config file and finally by
 	    # the options string (which should be in this format:
 	    # "key: value, key2:value2,key3: value3")
-	    def load(experiment, options = "", env = :development)
+	    def load(experiment, options, env = :development)
 	      init env
   			expath = File.expand_path("./experiments/#{experiment}/config.yaml")
   			if File.exists? expath
