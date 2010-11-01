@@ -17,20 +17,38 @@ module Experiment
   			end
   			@config.merge! parse(options)
   		end
-
+      
+      # loads the main config file
   		def init(env = :development)
   		  conf = YAML::load_file("./config/config.yaml")
   		  @config = conf["environments"][env.to_s]
   		end
-
+      
+      
+      # Allows access to any config option by key (either String or Symbol)
   		def [](v)
   			@config[v.to_s]
   		end
   		
+  		# Allows access to any config option by key. Supports Interploations.
+  		# Interpolations are supported as opts argument
+  		# words preceded with a colon (:) are interpolated
+  		def get(v, opts=nil)
+  		  if opts
+          opts.keys.reduce(@config[v.to_s].dup) do |result, inter|
+            result.gsub /:#{inter}/, opts[inter]
+          end
+        else
+  			  @config[v.to_s]
+			  end
+		  end
+		  
+		  # parses a string as passed into the CLI -o option
   		def parse(options)
   		  Hash[options.split(/\, ?/).map{|a| a.split /\: ?/ }]
 		  end
 		  
+		  # returns current options as a Hash object
 		  def to_h
 		    @config
 	    end
