@@ -1,47 +1,14 @@
 #!/usr/bin/env ruby
 
-# == Synopsis 
-#   This program will run an experimental batch or generate files
-# 	for a new experiment
-#
-# == Examples
-#   Running an experiment
-#     experiment --env dice experiment1 experiment2 ...
-#
-#   Generating a new experiment with 2 cross validations
-#     experiment new experiment_name --cv 2
-#
-#   List all available experiments
-#     experiment list
-# 	
-#
-# == Usage 
-#   experiment command [options]
-#
-#   For help use: experiment -h
-#
-# == Options
-#   -h, --help          Displays help message
-#   -v, --version       Display the version, then exit
-#   -q, --quiet         Output as little as possible, overrides verbose
-#   -V, --verbose       Verbose output
-#   -e, --env           Sets the environment to run in
-#                       Defaults to development
-#   -c, --cv            Number of Cross validations to run
-#   -m, --description   A description of the current experiment
-#
-# == Author
-#   Jakub Hampl
-#
-
-#require "rubygems"
 require 'optparse'
-#require 'rdoc/usage'
 require 'ostruct'
-#require File.dirname(__FILE__) + "/experiment"
+require "rdoc"
+require "rdoc/rdoc"
+
+require File.dirname(__FILE__) + "/../lib/experiment/runner"
 
 class App
-  VERSION = '1.0'
+  VERSION = '0.0.1'
   
   attr_reader :options
 
@@ -55,10 +22,8 @@ class App
     @options.quiet = false
 		@options.env = :development
 		@options.cv = 5
-		@options.n_classes = 10
-		@options.kind = "d"
 		@options.description = ""
-		@options.opts = {}
+		@options.opts = ""
 
   end
 
@@ -69,10 +34,7 @@ class App
       
       puts "Start at #{DateTime.now}\n\n" if @options.verbose
       
-      output_options if @options.verbose # [Optional]
-      require File.dirname(__FILE__) + "/vendor/backports/backports" if @options.env == :dice
-      
-      process_arguments            
+      output_options if @options.verbose # [Optional]         
       process_command
       
       puts "\nFinished at #{DateTime.now}" if @options.verbose
@@ -88,20 +50,18 @@ class App
     def parsed_options?
       
       # Specify options
-      opts = OptionParser.new 
-      opts.on('-v', '--version')    { output_version ; exit 0 }
-      opts.on('-h', '--help')       { output_help }
-      opts.on('-V', '--verbose')    { @options.verbose = true }  
-      opts.on('-q', '--quiet')      { @options.quiet = true }
-			opts.on('-e', '--env [ENV]', [:development, :dice])	{ |v| @options.env = v }
-			opts.on('-c', '--cv CV', Integer)	{ |v| @options.cv = v }
-      opts.on('-n', '--number NUMBER', Integer)	{ |v| @options.n_classes = v }
-      opts.on('-k', '--kind KIND', String)      { |v| @options.kind = v }
-      opts.on('-m', '--description M', String)      { |v| @options.description = v }
-      opts.on('-o', '--options OPTSTRING', String) do |v|
+      @opts = OptionParser.new 
+      @opts.on('-v', '--version')    { output_version ; exit 0 }
+      @opts.on('-h', '--help')       { output_help }
+      @opts.on('-V', '--verbose')    { @options.verbose = true }  
+      @opts.on('-q', '--quiet')      { @options.quiet = true }
+			@opts.on('-e', '--env [ENV]', [:development, :compute], "Sets the environment to run in.")	{ |v| @options.env = v }
+			@opts.on('-c', '--cv CV', Integer, "The number of cross validations to run.")	{ |v| @options.cv = v }
+      @opts.on('-m', '--description M', String, "Description or hypothesis for the condition being generated.")      { |v| @options.description = v }
+      @opts.on('-o', '--options OPTSTRING', String, "Options to override config with. key1:val1,key2:val2") do |v|
         @options.opts = v
       end
-      opts.parse!(@arguments) rescue return false
+      @opts.parse!(@arguments) #rescue return false
       
       process_options
       true      
@@ -122,21 +82,45 @@ class App
 
     # True if required arguments were provided
     def arguments_valid?
-      true if @arguments.length > 0
-    end
-    
-    # Setup the arguments
-    def process_arguments
-      # TO DO - place in local vars, etc
+      true #if @arguments.length > 0
     end
     
     def output_help
       output_version
-      RDoc::usage() #exits app
+      puts "= Synopsis
+This program will run an experimental batch or generate files      
+for a new experiment"
+      puts
+      output_usage
+      puts
+      puts "= Options"
+      puts @opts.help
+      puts
+      puts "= Commands"
+      # Bizzare hax to make RDoc parse the files
+      top_level = RDoc::TopLevel.new File.dirname(__FILE__) + "/../lib/experiment/runner.rb"
+      opts = RDoc::Options.new
+      stats = RDoc::Stats.new 1
+      parser = RDoc::Parser.for top_level, File.dirname(__FILE__) + "/../lib/experiment/runner.rb", File.read(File.dirname(__FILE__) + "/../lib/experiment/runner.rb"), opts, stats
+      d = parser.scan
+      d.modules.first.classes.first.method_list.each do |m|
+        if m.comment != ""
+          puts "== #{m.name == 'new_project' ? 'new' : m.name}"
+          puts m.comment
+          puts
+        end
+      end 
+      
+      puts "----"
+      exit 0
     end
     
     def output_usage
-      RDoc::usage('usage') # gets usage from comments above
+      puts "= Usage 
+experiment command [options]
+      
+For help use: experiment -h"
+      
     end
     
     def output_version
@@ -144,130 +128,19 @@ class App
     end
     
     def process_command
-			if @arguments.first == 'generate'
-			  dir = "./experiments/" + @arguments[1]
-				Dir.mkdir(dir)
-				File.open(dir + "/" + @arguments[1] + ".rb", "w") do |req_file|
-				  req_file.puts "# ## #{as_human_name @arguments[1]} ##"
-				  req_file.puts "# "+@options.description.split("\n").join("\n# ")
-				  req_file.puts
-				  req_file.puts
-				  req_file.puts "# The first contious block of comment will be included in your report."
-				  req_file.puts "# This includes the reference implementation."
-				  req_file.puts "# Override any desired files in this directory."
-				  Dir["./app/**/*.rb"].each do |f|
-				    p = f.split("/") - File.expand_path(".").split("/")
-				    req_file.puts "require File.dirname(__FILE__) + \"/../../#{p.join("/")}\""
-				  end
-				  req_file.puts "\nclass #{as_class_name @arguments[1]} < MyExperiment\n\t\nend"
-				end
-				File.open(dir + "/config.yaml", "w") do |f|
-				  f << "---\nexperiment:\n  development:\n  compute:\n"
-        end
-        
-      elsif @arguments.first == "new" # generate a new project
-        require 'fileutils'
-        dir = "./" + @arguments[1]
-        Dir.mkdir(dir)
-        %w[app config experiments report results test tmp vendor].each do |d|
-          Dir.mkdir(dir + "/" + d)
-        end
-        basedir = File.dirname(__FILE__) + "/.."
-        File.open(File.join(dir, "config", "config.yaml"), "w") do |f|
-          f << "---\nenvironments:\n  development:\n  compute:\n"
-        end
-        File.open(File.join(dir, ".gitignore"), "w") do |f|
-          f << "tmp/*"
-        end
-        FileUtils::cp File.join(basedir, "lib/experiment/generator/readme_template.txt"), File.join(dir, "README")
-        FileUtils::cp File.join(basedir, "lib/experiment/generator/Rakefile"), File.join(dir, "Rakefile")
-        FileUtils::cp File.join(basedir, "lib/experiment/generator/experiment_template.rb"), File.join(dir, "experiments", "experiment.rb")
-			elsif @arguments.first == "list"
-			  puts "Available experiments:"
-			  puts "  " + Dir["./experiments/*"].map{|a| File.basename(a) }.join(", ")
-			elsif @arguments.first == "report"
-			  dir = "./report/"
-        File.open(dir + "method.mmd", "w") do |f|
-          f.puts "# Methods #"
-          Dir["./experiments/*/*.rb"].each do |desc|
-            if File.basename(desc) == File.basename(File.dirname(desc)) + ".rb"
-              File.read(desc).split("\n").each do |line|
-                if m = line.match(/^\# (.+)/)
-                  f.puts m[1]
-                else
-                  break
-                end
-              end
-            f.puts
-            f.puts
-            end
-          end
-        end
-        require 'csv'
-        require "yaml"
-        require File.dirname(__FILE__)+"/../lib/experiment/stats"
-        CSV.open(dir + "/data.csv", "w") do |csv|
-          data = {}
-          Dir["./results/*/results.yaml"].each do |res|
-            d = YAML::load_file(res)
-            da = {}
-            d.each do |k, vals|
-              da[k.to_s + " mean"], da[k.to_s + " sd"] = Stats::mean(vals), Stats::standard_deviation(vals)
-              vals.each_with_index do |v, i|
-                da[k.to_s + " cv:" + i.to_s] = v
-              end
-            end
-            array_merge(data, da)
-          end
-          data.keys.map do |key| 
-      		  # calculate stats
-      		  a = data[key]
-      		  [key] + a
-    		  end.transpose.each do |row|
-    		    csv << row
-    		  end
-        end
-			elsif @arguments.shift == "run"
-			  require File.dirname(__FILE__) + "/../lib/experiment/base"
-			  require "experiments/experiment"
-				@arguments.each do |exp|
-				  require "./experiments/#{exp}/#{exp}"
-				  cla = eval(as_class_name(exp))
-					experiment = cla.new exp, @options.opts, @options.env
-					experiment.run! @options.cv
-				end
-			else
-			  output_usage
-			end
-      
-    end
-    
-    
-    private
-    def array_merge(h1, h2)
-  	  h2.each do |key, value|
-  	   h1[key] ||= []
-  	   h1[key] << value
-  	  end
-	  end
-    
-    def as_class_name(str)
-      str.split(/[\_\-]+/).map(&:capitalize).join
-    end
-    
-    def as_human_name(str)
-      str.split(/[\_\-]+/).map(&:capitalize).join(" ")
+      command = @arguments.shift
+      runner = Experiment::Runner.new @arguments, options
+      command = "new_project" if command == 'new'
+      #begin
+        runner.send command.to_sym
+      #rescue NoMethodError => e
+      #  puts "Wrong input #{e.inspect}"
+      #  output_usage
+      #end
     end
 
     def process_standard_input
       input = @stdin.read      
-      # TO DO - process input
-      
-      # [Optional]
-      # @stdin.each do |line| 
-      #  # TO DO - process each line
-      #end
-
     end
 end
 

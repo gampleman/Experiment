@@ -45,6 +45,7 @@ module Experiment
 		  
 		  # parses a string as passed into the CLI -o option
   		def parse(options)
+  		  return {} if options == ""
   		  Hash[options.split(/\, ?/).map{|a| a.split /\: ?/ }]
 		  end
 		  

@@ -3,13 +3,13 @@ require File.dirname(__FILE__) + "/stats"
 require File.dirname(__FILE__) + "/config"
 require 'benchmark'
 
+
 module Experiment
   class Base
     attr_reader :dir, :current_cv, :cvs
     
   	def initialize(experiment, options, env)
   		@experiment = experiment
-  		
   		Experiment::Config::load(experiment, options, env)
   		require "./experiments/#{experiment}/#{experiment}"
   		@abm = []
@@ -19,7 +19,7 @@ module Experiment
   	def run!(cv)
   		@cvs = cv || 1
       @results = {}
-  		Notify.print "Running #{@experiment} "
+  		Notify.started @experiment
       split_up_data
   		write_dir!
   		specification!
@@ -28,18 +28,31 @@ module Experiment
   			@bm = []
   			@current_cv = cv_num
   			File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
+  			  @ouptut_file = output
   			    run_the_experiment(@data[cv_num], output)
   			end
   			array_merge @results, analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt")
   			write_performance!
-  			Notify.print "."
+  			Notify.cv_done cv_num
   		end
   		summarize_performance!
   		summarize_results! @results
-  		Notify.print result_line
+  		Notify.completed @experiment
   	end
-
-
+    
+    
+    # use this evry time you want to do a measurement.
+    # It will be put on the record file and benchmarked
+    # automatically
+    def measure(label = "", &block)
+      out = ""
+      benchmark label do
+        out = yield
+      end
+      @ouptut_file << out
+    end
+    
+    
     # Registers and performs a benchmark which is then 
     # calculated to the total and everage times
   	def benchmark(label = "", &block)

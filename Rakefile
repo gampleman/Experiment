@@ -14,7 +14,7 @@ $hoe = Hoe.spec 'experiment' do
   self.developer 'Jakub Hampl', 'honitom@seznam.cz'
   #self.post_install_message = 'PostInstall.txt' # TODO remove if post-install message not required
   self.rubyforge_name       = self.name # TODO this is default value
-  # self.extra_deps         = [['activesupport','>= 2.0.2']]
+  #self.extra_deps         = [['ruby-growl','>= 1.0']]
 
 end
 
