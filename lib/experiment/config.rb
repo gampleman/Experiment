@@ -43,6 +43,10 @@ module Experiment
 			  end
 		  end
 		  
+		  def set(opts)
+		    @config.merge opts
+	    end
+		  
 		  # parses a string as passed into the CLI -o option
   		def parse(options)
   		  return {} if options == ""

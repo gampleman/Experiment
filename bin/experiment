@@ -24,7 +24,8 @@ class App
 		@options.cv = 5
 		@options.description = ""
 		@options.opts = ""
-
+    @options.mode = :master
+    @options.master = "localhost"
   end
 
   # Parse options, check arguments, then process the command
@@ -61,6 +62,8 @@ class App
       @opts.on('-o', '--options OPTSTRING', String, "Options to override config with. key1:val1,key2:val2") do |v|
         @options.opts = v
       end
+      @opts.on('-M', '--mode MODE', [:normal, :master, :slave], "The mode with which to run")	{ |v| @options.mode = v }
+      @opts.on( '--master MODE', String, "Address to the master machine.")	{ |v| @options.master = v }
       @opts.parse!(@arguments) #rescue return false
       
       process_options

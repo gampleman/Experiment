@@ -2,43 +2,122 @@ require File.dirname(__FILE__) + "/notify"
 require File.dirname(__FILE__) + "/stats"
 require File.dirname(__FILE__) + "/config"
 require 'benchmark'
-
+require "drb/drb"
 
 module Experiment
   class Base
     attr_reader :dir, :current_cv, :cvs
-    
-  	def initialize(experiment, options, env)
-  		@experiment = experiment
+    attr_accessor :master
+  	def initialize(mode, experiment, options, env)
+  		unless mode == :slave
+  		  extend DRb::DRbUndumped
+  		  @experiment = experiment
+    		#require "./experiments/#{experiment}/#{experiment}"
+    		@abm = []
+  		end
+  		@done = false
   		Experiment::Config::load(experiment, options, env)
-  		require "./experiments/#{experiment}/#{experiment}"
-  		@abm = []
+  		@mode = mode
   	end
+  	
+  	def done?
+  	  @done
+	  end
+  	
+  	def get_work()
+  	  if cv = @started.index(false)
+  	    @started[cv] = true
+  	    {:cv => cv, :input => @data[cv], :dir => @dir, :options => Experiment::Config.to_h }
+  	  else
+  	    false
+	    end
+	  end
+	  
+	  def submit_result(cv, result, performance)
+	    @completed[cv] = true
+	    array_merge(@results, result)
+	    @abm << performance
+      Notify.cv_done cv
+	    master_done! if @completed.all?
+	  end
     
-    # runs the whole experiment
-  	def run!(cv)
-  		@cvs = cv || 1
+    
+    def slave_run!
+      while work = @master.get_work
+        puts work.inspect
+        Experiment::Config.set work[:options]
+        @current_cv = work[:cv]
+
+        @dir = work[:dir]
+        File.open(@dir + "/raw-#{@current_cv}.txt", "w") do |output|
+  			  @ouptut_file = output
+  			  run_the_experiment(work[:input], output)
+  			end
+  			result = analyze_result!(@dir + "/raw-#{@current_cv}.txt", @dir + "/analyzed-#{@current_cv}.txt")
+  			write_performance!
+  			@master.submit_result @current_cv, result, @abm
+      end
+
+    end
+    
+    
+    def master_start!(cv)
+      
+      @cvs = cv || 1
       @results = {}
   		Notify.started @experiment
       split_up_data
   		write_dir!
   		specification!
-
-  		@cvs.times do |cv_num|
-  			@bm = []
-  			@current_cv = cv_num
-  			File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
-  			  @ouptut_file = output
-  			    run_the_experiment(@data[cv_num], output)
-  			end
-  			array_merge @results, analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt")
-  			write_performance!
-  			Notify.cv_done cv_num
-  		end
-  		summarize_performance!
+  		@completed = (1..@cvs).map {|a| false }
+  		@started = @completed.dup
+    end
+    
+    def master_done!
+      puts "master done called"
+      @done = true
+      summarize_performance!
   		summarize_results! @results
   		Notify.completed @experiment
+  		
+  		#sleep 1
+      #DRb.stop_service
+    end
+    
+    # runs the whole experiment
+  	def run!(cv)
+  		@cvs = cv || 1
+      @results = {}
+      if @mode == :master
+  		  Notify.started @experiment
+        split_up_data
+    		write_dir!
+    		specification!
+
+    		@cvs.times do |cv_num|
+    			@bm = []
+    			@current_cv = cv_num
+  			  
+    			@slave.run_as_slave @current_cv, @dir, @cvs, @data[cv_num]
+    			Notify.cv_done cv_num
+    		end
+    		summarize_performance!
+    		summarize_results! @results
+    		Notify.completed @experiment  		  
+  		end
   	end
+  	
+  	
+  	def run_as_slave(current_cv, dir, cvs, data)
+  	  cv, @current_cv, @dir, @cvs = current_cv, current_cv, dir, cvs
+  	  File.open(@dir + "/raw-#{cv}.txt", "w") do |output|
+			  @ouptut_file = output
+			  run_the_experiment(data, output)
+			end
+			result = analyze_result!(@dir + "/raw-#{@current_cv}.txt", @dir + "/analyzed-#{@current_cv}.txt")
+			#write_performance!
+			result
+	  end
     
     
     # use this evry time you want to do a measurement.
@@ -56,6 +135,7 @@ module Experiment
     # Registers and performs a benchmark which is then 
     # calculated to the total and everage times
   	def benchmark(label = "", &block)
+  	  @bm ||= []
   	  @bm << Benchmark.measure("CV #{@current_cv} #{label}", &block)
   	end
 
@@ -83,7 +163,7 @@ module Experiment
   			f << @bm.map {|m| m.format("%19n "+Benchmark::FMTSTR)}.join
   			total = @bm.reduce(0) {|t, m| m + t}
   			f << total.format("         Total: "+Benchmark::FMTSTR)
-  			@abm << total
+  			@abm = total
   		end
   	end
     
@@ -98,7 +178,7 @@ module Experiment
     # creates a summary of the results and writes to 'all.csv'
   	def summarize_results!(results)
   	  File.open(@dir + '/results.yaml', 'w' ) do |out|
-  			YAML.dump(results, out )
+  			YAML.dump(results, out)
   		end
   		
   		# create an array of arrays
@@ -112,7 +192,7 @@ module Experiment
   		
   		ls = ["Standard Deviation".length] + ls
   		res = [["cv"] + (1..cvs).to_a.map(&:to_s) + ["Mean", "Standard Deviation"]] + res
-  		
+  		puts res.inspect
   		out = ""
   		res.transpose.each do |col|
   		  col.each_with_index do |cell, i|

@@ -113,16 +113,58 @@ module Experiment
 		# use the -o option to override configuration
 		def run
 		  require File.dirname(__FILE__) + "/base"
+
 		  require "./experiments/experiment"
 		  Notify::init @arguments.length * @options.cv
+		  
+		  if @options.mode == :master
+		    require "drb/drb"
+		    require File.dirname(__FILE__) + "/work_server"
+		    ws = WorkServer.new @arguments, @options
+		    Notify::done
+		    return true
+  	  end
 			@arguments.each do |exp|
 			  require "./experiments/#{exp}/#{exp}"
 			  cla = eval(as_class_name(exp))
-				experiment = cla.new exp, @options.opts, @options.env
-				experiment.run! @options.cv
+				experiment = cla.new @options.mode, exp, @options.opts, @options.env
+				if @options.mode == :master
+				  experiment.master_start! @options.cv
+			  else
+			    experiment.slave_run!
+		    end
 			end
 			Notify::done
 		end
+		
+		def worker
+		  require "drb/drb"
+		  require File.dirname(__FILE__) + "/base"
+
+		  
+		  server_uri="druby://#{@options.master}:8787"
+      DRb.start_service
+      @master = DRbObject.new_with_uri(server_uri)
+      
+      while item = @master.new_item
+        #puts item
+        exp = @master.experiment item
+        require "./experiments/experiment"
+        require "./experiments/#{exp}/#{exp}"
+			  cla = eval(as_class_name(exp))
+				experiment = cla.new :slave, exp, @options.opts, @options.env
+			  experiment.master = @master.instance item
+			  experiment.slave_run!
+      end
+      exit
+      @arguments.each do |exp|
+			  require "./experiments/#{exp}/#{exp}"
+			  cla = eval(as_class_name(exp))
+				experiment = cla.new @options.mode, exp, @options.opts, @options.env
+			  experiment.master = @master
+			  experiment.slave_run!
+			end
+	  end
 		
 		private
     def array_merge(h1, h2)
