@@ -64,45 +64,11 @@ So far we have been talking mainly about variations in the source code of the ex
 
     Experiment::Config[:my_config_variable] # anywhere in your code
     
-Where does this come from? You have a config directory containing a `config.yaml` file. This file contains several environments. The idea is that you might want to tweak your options differently when running on your laptop then when running on a university supercomputer ;)
+You have a config directory containing a `config.yaml` file. This file contains several environments. The idea is that you might want to tweak your options differently when running on your laptop then when running on a university supercomputer. Experiments also have their own config file that override the global.
 
-`development` is the default environment, you can set any other with the `--env` option.
+More info: https://github.com/gampleman/Experiment/wiki/Configuration
 
-Notice that also when generating an experimental condition it also gets its own config.yaml file. This file overrides the main config file so you can introduce in condition specific options.
 
-And finally when running an experiment you can use the -o or --options option to override any config you want.
-
-Let me give you an example. Your main config file looks like this:
-
-    environments:
-      development:
-        ref_dir: /Users/kubowo/Desktop/points-vals
-        master_dir: /Users/kubowo/Desktop/points-vals/s014
-        alpha: 0.4
-      compute:
-        ref_dir: /afs/group/DB/points
-        master_dir: /afs/group/DB/points/s145
-        alpha: 0.4
-
-Your `experiments/my_condition/config.yaml` looks like this:
-
-    experiment:
-      development:
-        alpha: 0.5
-      compute:
-        alpha: 0.6
-
-And you run the experiment with
-
-    $ experiment run my_condition --env compute -o "master_dir: /Users/kubowo/Desktop/points-vals/s015"
-    
-Then your final config will look like this:
-
-    { :ref_dir => "/afs/group/DB/points", 
-      :master_dir => "/Users/kubowo/Desktop/points-vals/s015", 
-      :alpha => 0.6 }
-
-Flexible, eh? **NEW** Check out the *get* method. It has features like interpolation and defaults.
 
 == Cross Validation
 
@@ -124,6 +90,8 @@ Newly this library supports a simple distributed model of running experiments. S
     $ experiment worker --address IP_OF_COMPUTER_WHERE_YOU_RUN_EXPERIMENTS
     
 and then run experiments with --distributed flag.
+
+More details: https://github.com/gampleman/Experiment/wiki/Distributed-Mode
 
 == Misc
 
