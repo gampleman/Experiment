@@ -27,7 +27,7 @@ Experiments are set up in the experiments directory. The first thing you need to
 
 For a typical experiment you will need to do some setup work (eg. initialize your classes, calculate parametres, etc.), run the experiment and maybe do cleanup (remove temp. files).
 
-You do all this work in the `run_the_experiment` method. Remember to pass the raw output via `<<` to the `output` variable and wrap the experiment in a benchmark block. This will be automatically saved to the results directory for further analysis.
+You do all this work in the `run_the_experiment` method. Use the `measure` method to wrap your measurements. These will be autmatically benchmarked and their ouput will be automatically saved to the results directory for further analysis.
 
 The `test_data` method lets you specify an array of data points that you want split for cross-validation (see below). This will be passed to in `run_the_experiment` in the input variable.
 
@@ -102,7 +102,7 @@ Then your final config will look like this:
       :master_dir => "/Users/kubowo/Desktop/points-vals/s015", 
       :alpha => 0.6 }
 
-Flexible, eh?
+Flexible, eh? **NEW** Check out the *get* method. It has features like interpolation and defaults.
 
 == Cross Validation
 
@@ -116,8 +116,17 @@ Surprise, surprise. This will create two files in your `report` directory (BTW, 
 
 The second file created is the `data.csv` file which contains the data from all your experiments. It should be importable to Numbers, Excel even Matlab for further analysis and charting.
 
+
+== Distributed computing support
+
+Newly this library supports a simple distributed model of running experiments. Setup worker computers with the 
+
+    $ experiment worker --address IP_OF_COMPUTER_WHERE_YOU_RUN_EXPERIMENTS
+    
+and then run experiments with --distributed flag.
+
 == Misc
 
-So that's pretty much the gist of experiment. There's a few other features (and a few soon to come to a gem near you ;-) 
+So that's pretty much the gist of experiment. There's a few other features (and a few soon to come to a gem near you ;-) Growl notifications are now supported. Turn them of by setting growl_notifications to false in your config file.
 
 Also check out the RDocs: http://rdoc.info/github/gampleman/Experiment/master/frames

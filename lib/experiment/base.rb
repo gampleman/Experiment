@@ -1,21 +1,30 @@
 require File.dirname(__FILE__) + "/notify"
 require File.dirname(__FILE__) + "/stats"
 require File.dirname(__FILE__) + "/config"
+require File.dirname(__FILE__) + "/distributed"
 require 'benchmark'
 require "drb/drb"
 
 module Experiment
   class Base
+    
+    include Distributed
+    
     attr_reader :dir, :current_cv, :cvs
-    attr_accessor :master
+
   	def initialize(mode, experiment, options, env)
-  		unless mode == :slave
-  		  extend DRb::DRbUndumped
-  		  @experiment = experiment
-    		#require "./experiments/#{experiment}/#{experiment}"
-    		@abm = []
+  		@experiment = experiment
+  		case mode
+  		  
+  		when :normal
+  		  @abm = [] 
+		  when :master
+		    @abm = []
+		    extend DRb::DRbUndumped
+		    @done = false
+	    when :slave
+		    
   		end
-  		@done = false
   		Experiment::Config::load(experiment, options, env)
   		@mode = mode
   	end
@@ -24,111 +33,47 @@ module Experiment
   	  @done
 	  end
   	
-  	def get_work()
-  	  if cv = @started.index(false)
-  	    @started[cv] = true
-  	    {:cv => cv, :input => @data[cv], :dir => @dir, :options => Experiment::Config.to_h }
-  	  else
-  	    false
-	    end
-	  end
-	  
-	  def submit_result(cv, result, performance)
-	    @completed[cv] = true
-	    array_merge(@results, result)
-	    @abm << performance
-      Notify.cv_done cv
-	    master_done! if @completed.all?
-	  end
+  	
     
-    
-    def slave_run!
-      while work = @master.get_work
-        puts work.inspect
-        Experiment::Config.set work[:options]
-        @current_cv = work[:cv]
-
-        @dir = work[:dir]
-        File.open(@dir + "/raw-#{@current_cv}.txt", "w") do |output|
-  			  @ouptut_file = output
-  			  run_the_experiment(work[:input], output)
-  			end
-  			result = analyze_result!(@dir + "/raw-#{@current_cv}.txt", @dir + "/analyzed-#{@current_cv}.txt")
-  			write_performance!
-  			@master.submit_result @current_cv, result, @abm
-      end
-
-    end
-    
-    
-    def master_start!(cv)
-      
-      @cvs = cv || 1
+    # runs the whole experiment
+  	def normal_run!(cv)
+  		@cvs = cv || 1
       @results = {}
   		Notify.started @experiment
       split_up_data
   		write_dir!
   		specification!
-  		@completed = (1..@cvs).map {|a| false }
-  		@started = @completed.dup
-    end
-    
-    def master_done!
-      puts "master done called"
-      @done = true
-      summarize_performance!
+
+  		@cvs.times do |cv_num|
+  			@bm = []
+  			@current_cv = cv_num
+  			File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
+  			  @ouptut_file = output
+  			    run_the_experiment(@data[cv_num], output)
+  			end
+  			array_merge @results, analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt")
+  			write_performance!
+  			Notify.cv_done @experiment, cv_num
+  		end
+  		summarize_performance!
   		summarize_results! @results
   		Notify.completed @experiment
-  		
-  		#sleep 1
-      #DRb.stop_service
-    end
-    
-    # runs the whole experiment
-  	def run!(cv)
-  		@cvs = cv || 1
-      @results = {}
-      if @mode == :master
-  		  Notify.started @experiment
-        split_up_data
-    		write_dir!
-    		specification!
-
-    		@cvs.times do |cv_num|
-    			@bm = []
-    			@current_cv = cv_num
-  			  
-    			@slave.run_as_slave @current_cv, @dir, @cvs, @data[cv_num]
-    			Notify.cv_done cv_num
-    		end
-    		summarize_performance!
-    		summarize_results! @results
-    		Notify.completed @experiment  		  
-  		end
   	end
-  	
-  	
-  	def run_as_slave(current_cv, dir, cvs, data)
-  	  cv, @current_cv, @dir, @cvs = current_cv, current_cv, dir, cvs
-  	  File.open(@dir + "/raw-#{cv}.txt", "w") do |output|
-			  @ouptut_file = output
-			  run_the_experiment(data, output)
-			end
-			result = analyze_result!(@dir + "/raw-#{@current_cv}.txt", @dir + "/analyzed-#{@current_cv}.txt")
-			#write_performance!
-			result
-	  end
     
     
     # use this evry time you want to do a measurement.
     # It will be put on the record file and benchmarked
     # automatically
-    def measure(label = "", &block)
+    # The weight parameter is used for calculating 
+    # Notify::step. It should be an integer denoting how many 
+    # such measurements you wish to do.
+    def measure(label = "", weight = nil, &block)
       out = ""
       benchmark label do
         out = yield
       end
       @ouptut_file << out
+      Notify::step(@experiment, @current_cv, 1.0/weight) unless weight.nil?
     end
     
     
@@ -163,7 +108,8 @@ module Experiment
   			f << @bm.map {|m| m.format("%19n "+Benchmark::FMTSTR)}.join
   			total = @bm.reduce(0) {|t, m| m + t}
   			f << total.format("         Total: "+Benchmark::FMTSTR)
-  			@abm = total
+  			@abm ||= []
+  			@abm << total
   		end
   	end
     
@@ -192,7 +138,6 @@ module Experiment
   		
   		ls = ["Standard Deviation".length] + ls
   		res = [["cv"] + (1..cvs).to_a.map(&:to_s) + ["Mean", "Standard Deviation"]] + res
-  		puts res.inspect
   		out = ""
   		res.transpose.each do |col|
   		  col.each_with_index do |cell, i|

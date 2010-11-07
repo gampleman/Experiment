@@ -9,7 +9,8 @@ module Experiment
 	    # the options string (which should be in this format:
 	    # "key: value, key2:value2,key3: value3")
 	    def load(experiment, options, env = :development)
-	      init env
+	      #init env
+	      @config ||= {}
   			expath = File.expand_path("./experiments/#{experiment}/config.yaml")
   			if File.exists? expath
   				exp = YAML::load_file(expath)
@@ -33,17 +34,22 @@ module Experiment
   		# Allows access to any config option by key. Supports Interploations.
   		# Interpolations are supported as opts argument
   		# words preceded with a colon (:) are interpolated
-  		def get(v, opts=nil)
-  		  if opts
-          opts.keys.reduce(@config[v.to_s].dup) do |result, inter|
+  		# Otionaly second argument may be a default value to use if option
+  		# not present.
+  		def get(v, *opts)
+  		  default = opts.shift if opts.length == 2 || !opts.first.is_a?(Hash)
+  		  out = @config[v.to_s] || default
+  		  if opts = opts.first
+          opts.keys.reduce(out.dup) do |result, inter|
             result.gsub /:#{inter}/, opts[inter]
           end
         else
-  			  @config[v.to_s]
+  			  out
 			  end
 		  end
 		  
 		  def set(opts)
+		    @config ||= opts
 		    @config.merge opts
 	    end
 		  

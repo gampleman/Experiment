@@ -115,58 +115,80 @@ module Experiment
 		  require File.dirname(__FILE__) + "/base"
 
 		  require "./experiments/experiment"
-		  Notify::init @arguments.length * @options.cv
+      Experiment::Config::init @options.env
 		  
-		  if @options.mode == :master
+		  if @options.distributed
 		    require "drb/drb"
 		    require File.dirname(__FILE__) + "/work_server"
-		    ws = WorkServer.new @arguments, @options
+		    puts "Running in distributed mode. Run other machines with:\nexperiment worker --address #{local_ip}\n"
+		    Notify::init @arguments.length * @options.cv, STDOUT, Experiment::Config::get(:growl_notifications, true)
+		    ws = WorkServer.new @arguments, @options, local_ip
 		    Notify::done
 		    return true
-  	  end
-			@arguments.each do |exp|
-			  require "./experiments/#{exp}/#{exp}"
-			  cla = eval(as_class_name(exp))
-				experiment = cla.new @options.mode, exp, @options.opts, @options.env
-				if @options.mode == :master
-				  experiment.master_start! @options.cv
-			  else
-			    experiment.slave_run!
-		    end
-			end
-			Notify::done
+  	  else
+  	    Notify::init @arguments.length * @options.cv, STDOUT, Experiment::Config::get(:growl_notifications, true)
+			  @arguments.each do |exp|
+  			  require "./experiments/#{exp}/#{exp}"
+  			  cla = eval(as_class_name(exp))
+  				experiment = cla.new :normal, exp, @options.opts, @options.env
+  				experiment.normal_run! @options.cv
+  			end
+			  Notify::done
+		  end
 		end
 		
+		
+		# This is a Worker implementation. It requires an --address option
+		# of it's master server and will recieve tasks (experiments and
+		# cross-validations) and compute them.
 		def worker
 		  require "drb/drb"
 		  require File.dirname(__FILE__) + "/base"
-
-		  
-		  server_uri="druby://#{@options.master}:8787"
-      DRb.start_service
-      @master = DRbObject.new_with_uri(server_uri)
-      
-      while item = @master.new_item
-        #puts item
-        exp = @master.experiment item
-        require "./experiments/experiment"
-        require "./experiments/#{exp}/#{exp}"
-			  cla = eval(as_class_name(exp))
-				experiment = cla.new :slave, exp, @options.opts, @options.env
-			  experiment.master = @master.instance item
-			  experiment.slave_run!
+		  Experiment::Config::init @options.env
+		  loop do
+		    @server_uri="druby://#{@options.master}:8787"
+  		  connect
+  		  Notify::init 0, STDOUT, false, @master
+        while item = @master.new_item
+          #puts item
+          exp = @master.experiment item
+          require "./experiments/experiment"
+          require "./experiments/#{exp}/#{exp}"
+  			  cla = eval(as_class_name(exp))
+  				experiment = cla.new :slave, exp, @options.opts, @options.env
+  			  experiment.master = @master.instance item
+  			  experiment.slave_run!
+        end
       end
-      exit
-      @arguments.each do |exp|
-			  require "./experiments/#{exp}/#{exp}"
-			  cla = eval(as_class_name(exp))
-				experiment = cla.new @options.mode, exp, @options.opts, @options.env
-			  experiment.master = @master
-			  experiment.slave_run!
-			end
 	  end
 		
 		private
+		
+		require 'socket'
+
+    def connect
+      begin
+        puts "Connecting..."
+        DRb.start_service
+        @master = DRbObject.new_with_uri(@server_uri)
+        @master.ready?
+      rescue
+        sleep 10
+        connect
+      end
+    end
+
+    def local_ip
+      orig, Socket.do_not_reverse_lookup = Socket.do_not_reverse_lookup, true  
+      UDPSocket.open do |s|
+        s.connect '64.233.187.99', 1
+        s.addr.last
+      end
+    ensure
+      Socket.do_not_reverse_lookup = orig
+    end
+    
+		
     def array_merge(h1, h2)
   	  h2.each do |key, value|
   	   h1[key] ||= []

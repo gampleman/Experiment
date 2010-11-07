@@ -11,6 +11,8 @@ lib/experiment/generator/experiment_template.rb
 lib/experiment/generator/Rakefile
 lib/experiment/base.rb
 lib/experiment/notify.rb
+lib/experiment/work_server.rb
+lib/experiment/distributed.rb
 test/test_experiment.rb
 test/test_helper.rb
 bin/experiment

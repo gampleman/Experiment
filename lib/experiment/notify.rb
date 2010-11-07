@@ -1,14 +1,15 @@
 # This class is responsible for UI goodness in letting you know 
 # about the progress of your experiments
-
+require "drb/drb"
 class Notify
+  
   class << self
-    
+    include DRb::DRbUndumped
     # initialize display
-    def init(total, out = STDERR)
+    def init(total, out = STDERR, growl = true, mode = :normal)
       @curent_experiment = ""
       @current_cv = 0
-      @cv_prog = 0
+      @cv_prog = {}
       @total = total
       @out = out
       @terminal_width = 80
@@ -18,13 +19,16 @@ class Notify
       @finished_p = false
       @start_time = Time.now
       @previous_time = @start_time
-      show
+      @growl = growl
+      @mode = mode
+      show if @mode == :normal
     end
     
     # Called when starting work on a particular experiment
     def started(experiment)
       @curent_experiment = experiment
       @current_cv = 1
+      @cv_prog[experiment] = []
       show_if_needed
     end
     
@@ -33,10 +37,12 @@ class Notify
     # The message can be expanded by overriding the result_line 
     # method in the experiment class
     def completed(experiment, msg = "")
-      begin
-        `G_TITLE="Experiment Complete" #{File.dirname(__FILE__)}/../../bin/growl.sh -nosticky "Experimental condition #{experiment} complete. #{msg}"`
-      rescue
-        # probably not on OSX
+      if @growl
+        begin
+          `G_TITLE="Experiment Complete" #{File.dirname(__FILE__)}/../../bin/growl.sh -nosticky "Experimental condition #{experiment} complete. #{msg}"`
+        rescue
+          # probably not on OSX
+        end
       end
       m = "Condition #{experiment} complete. #{msg}"
       puts m + " " * @terminal_width
@@ -44,10 +50,10 @@ class Notify
     end
     
     # called after a crossvalidation has completed
-    def cv_done(num)
-      @current_cv = num + 1
-      inc(1 - @cv_prog)
-      @cv_prog = 0
+    def cv_done(experiment, num)
+      @cv_prog[experiment][num] ||= 0
+      inc(1 - @cv_prog[experiment][num])
+      #@cv_prog = 0
     end
     
     # Wrap up
@@ -61,12 +67,17 @@ class Notify
     # The argument should be a fraction (0 < num < 1) which tells 
     # how big a portion the task was of the complete run (eg. your 
     # calls should sum up to 1).
-    def step(num)
-      if num > 1
-        num = num / 100
+    def step(experiment, cv, num)
+      if @mode == :normal
+        if num > 1
+          num = num / 100
+        end
+        inc(num)
+        @cv_prog[experiment][cv] ||= 0
+        @cv_prog[experiment][cv] += num
+      else
+        @mode.notify.step(experiment, cv, num)
       end
-      inc(num)
-      @cv_prog += num
     end
     
   end
