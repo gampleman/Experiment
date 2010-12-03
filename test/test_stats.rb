@@ -1,8 +1,9 @@
-require File.dirname(__FILE__) + "/../lib/experiment/stats"
-#require "wrong"
+require File.dirname(__FILE__) + "/../lib/experiment/stats/descriptive"
+#require "wrong"require "../lib/experiment/stats/descriptive"
+
 class TestStats < Test::Unit::TestCase
   #include Wrong
-  
+  include Experiment
   def setup
     @data = [1, 2, 3, 4]
   end
@@ -30,5 +31,10 @@ class TestStats < Test::Unit::TestCase
   
   def test_median
     assert_equal 2.5, Stats::median(@data)
+  end
+  
+  def test_monkey_patch
+    Stats::monkey_patch!
+    assert_equal 1.6666666666666667, [1, 2, 3, 4].variance
   end
 end

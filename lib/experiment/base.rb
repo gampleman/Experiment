@@ -1,23 +1,40 @@
 require File.dirname(__FILE__) + "/notify"
-require File.dirname(__FILE__) + "/stats"
+require File.dirname(__FILE__) + "/stats/descriptive"
 require File.dirname(__FILE__) + "/config"
+require File.dirname(__FILE__) + "/params"
 require File.dirname(__FILE__) + "/distributed"
 require 'benchmark'
 require "drb/drb"
+require "yaml"
 
 module Experiment
+  # The base class for defining experimental conditons.
+  # @author Jakub Hampl
+  # @see https://github.com/gampleman/Experiment/wiki/Designing-your-experiment
   class Base
-    
+
     include Distributed
     
-    attr_reader :dir, :current_cv, :cvs
-
-  	def initialize(mode, experiment, options, env)
+    @@cleanup_raw_files = false
+    
+    # The directory in which the results will be written to.  
+    attr_reader :dir
+    # The number of the current cross-validation
+    attr_reader :current_cv
+    # The number of overall cross-validations
+    attr_reader :cvs
+    
+    # Called internally by the framewrok
+    # @private
+    # @param [:normal, :master, :slave] mode
+    # @param [String] experiment name
+  	def initialize(mode, experiment, options)
   		@experiment = experiment
   		case mode
   		  
   		when :normal
   		  @abm = [] 
+  		  @options = options
 		  when :master
 		    @abm = []
 		    extend DRb::DRbUndumped
@@ -25,25 +42,45 @@ module Experiment
 	    when :slave
 		    
   		end
-  		Experiment::Config::load(experiment, options, env)
+  		Experiment::Config::load(experiment, options.opts, options.env)
   		@mode = mode
   	end
   	
+  	# Is the experiment done.
   	def done?
   	  @done
 	  end
   	
-  	
+  	# The default analysis function
+  	# Not terribly useful, better to override
+  	# @abstract Override for your own method analysis.
+  	# @param [String] input file path of results written by `measure` calls.
+  	# @param [String] output file path where to optionally write detailed analysis.
+  	# @return [Hash] Summary of analysis.
+  	def analyze_result!(input, output)
+      YAML::load_file(input)
+    end
     
-    # runs the whole experiment
+    # Sets up actions to do after the task is completed.
+    #
+    # This will be expanded in the future. Currently the only
+    # possible usage is with :delete_raw_files
+    # @example
+    #   after_completion :delete_raw_files
+    # @param [:delete_raw_files] args If called will delete the raw-*.txt files
+    #   in the {dir} after the experiment successfully completes.
+    def self.after_completion(*args)
+      @@cleanup_raw_files = args.include? :delete_raw_files
+    end
+    
+    # runs the whole experiment, called by the framework
+    # @private
   	def normal_run!(cv)
   		@cvs = cv || 1
       @results = {}
   		Notify.started @experiment
       split_up_data
   		write_dir!
-  		specification!
-
   		@cvs.times do |cv_num|
   			@bm = []
   			@current_cv = cv_num
@@ -57,44 +94,101 @@ module Experiment
   		end
   		summarize_performance!
   		summarize_results! @results
+  		specification!
+  		cleanup!
   		Notify.completed @experiment
+  		puts File.read(@dir + "/summary.mmd") if @options.summary
   	end
     
     
-    # use this evry time you want to do a measurement.
+    # Use this every time you want to do a measurement.
     # It will be put on the record file and benchmarked
-    # automatically
-    # The weight parameter is used for calculating 
-    # Notify::step. It should be an integer denoting how many 
-    # such measurements you wish to do.
+    # automatically.
+    #
+    # @param [Integer] weight Used for calculating 
+    #   Notify::step. It should be an integer denoting how many 
+    #   such measurements you wish to do.
     def measure(label = "", weight = nil, &block)
       out = ""
       benchmark label do
         out = yield
       end
-      @ouptut_file << out
+      if out.is_a? String
+        @ouptut_file << out
+      else
+        YAML::dump(out, @ouptut_file)
+      end
       Notify::step(@experiment, @current_cv, 1.0/weight) unless weight.nil?
     end
     
     
     # Registers and performs a benchmark which is then 
-    # calculated to the total and everage times
+    # calculated to the total and everage times.
+    # 
+    # A lower-level alternative to measure.
   	def benchmark(label = "", &block)
   	  @bm ||= []
   	  @bm << Benchmark.measure("CV #{@current_cv} #{label}", &block)
   	end
 
   	
-    # Creates the results directory for the current experiment
+    
+    
+    # creates a summary of the results and writes to 'summary.mmd'
+  	def summarize_results!(results)
+  	  File.open(@dir + '/results.yaml', 'w' ) do |out|
+  			YAML.dump(results, out)
+  		end
+  		# create an array of arrays
+  		res = results.keys.map do |key| 
+  		  # calculate stats
+  		  a = results[key]
+  		  if a.all? {|el| el.is_a? Numeric }
+  		    [key] + a + [Stats::mean(a), Stats::standard_deviation(a)]
+		    else
+		      [key] + a + ["--", "--"]
+	      end
+		  end
+		  
+		  ls = results.keys.map{|v| [7, v.to_s.length].max }
+  		
+  		ls = ["Std Deviation".length] + ls
+  		res = header_column + res
+  		res = res.transpose
+  		out = build_table res, ls
+  		File.open(@dir + "/summary.mmd", 'w') do |f|
+  		  f << "## Results for #{@experiment} ##\n\n"
+  		  f << out
+		  end
+  	  #results = results.reduce({}) do |tot, res|
+  	  # cv = res.delete :cv
+  	  # tot.merge Hash[res.to_a.map {|a| ["cv_#{cv}_#{a.first}".to_sym, a.last]}]
+  	  #end
+  	  #FasterCSV.open("./results/all.csv", "a") do |csv|
+  	  #  csv << results.to_a.sort_by{|a| a.first.to_s}.map(&:last)
+  	  #end
+  	end
+
+  	
+  	# A silly method meant to be overriden.
+  	# should return an array, which will be then split up for cross-validating.
+  	# @abstract Override this method to return an array.
+  	def test_data
+  	  (1..cvs).to_a
+  	end
+  	
+  	protected
+  	
+  	# Creates the results directory for the current experiment
   	def write_dir!
   		@dir = "./results/#{@experiment}-cv#{@cvs}-#{Time.now.to_i.to_s[4..9]}"
   		Dir.mkdir @dir
   	end
     
     # Writes a yaml specification of all the options used to run the experiment
-  	def specification!
+  	def specification! all = false
   		File.open(@dir + '/specification.yaml', 'w' ) do |out|
-  			YAML.dump({:name => @experiment, :date => Time.now, :configuration => Experiment::Config.to_h, :cross_validations => @cvs}, out )
+  			YAML.dump({:name => @experiment, :date => Time.now, :configuration => (all ? Experiment::Config.to_hash : Experiment::Config.to_h), :cross_validations => @cvs}, out )
   		end
   	end
     
@@ -120,60 +214,36 @@ module Experiment
   			f << total.format("       Average: "+Benchmark::FMTSTR)
   		end
   	end
-    
-    # creates a summary of the results and writes to 'all.csv'
-  	def summarize_results!(results)
-  	  File.open(@dir + '/results.yaml', 'w' ) do |out|
-  			YAML.dump(results, out)
-  		end
-  		
-  		# create an array of arrays
-  		res = results.keys.map do |key| 
-  		  # calculate stats
-  		  a = results[key]
-  		  [key] + a + [Stats::mean(a), Stats::standard_deviation(a)]
-		  end
-		  
-		  ls = results.keys.map{|v| v.to_s.length }
-  		
-  		ls = ["Standard Deviation".length] + ls
-  		res = [["cv"] + (1..cvs).to_a.map(&:to_s) + ["Mean", "Standard Deviation"]] + res
-  		out = ""
-  		res.transpose.each do |col|
+  	
+  	def build_table(table_data, ls)
+  	  out = ""
+  	  table_data.each_with_index do |col, row_num|
   		  col.each_with_index do |cell, i|
   		    l = ls[i]
   		    out << "| "
   		    if cell.is_a?(String) || cell.is_a?(Symbol)
   		      out << sprintf("%#{l}s", cell)
-		      else
+		      elsif cell.is_a? Numeric
 		        out << sprintf("%#{l}.3f", cell)
+	        else
+	          out << sprintf("%#{l}s", cell.to_s)
 		      end
 		      out << " "
   		  end
+  		  
   		  out << "|\n"
-  		end
-  		File.open(@dir + "/summary.mmd", 'w') do |f|
-  		  f << "## Results for #{@experiment} ##\n\n"
-  		  f << out
-		  end
-  	  #results = results.reduce({}) do |tot, res|
-  	  # cv = res.delete :cv
-  	  # tot.merge Hash[res.to_a.map {|a| ["cv_#{cv}_#{a.first}".to_sym, a.last]}]
-  	  #end
-  	  #FasterCSV.open("./results/all.csv", "a") do |csv|
-  	  #  csv << results.to_a.sort_by{|a| a.first.to_s}.map(&:last)
-  	  #end
+  		  
+  		  if row_num == 0 || row_num == table_data.length - 3
+  		    col.each_index do |i|
+  		      out << "|" + "-" * (ls[i] + 2)
+		      end
+		      out << "|\n"
+	      end	      
+  		end # each_with_index
+  		
+  		return out
   	end
   	
-  	def result_line
-  	 " Done\n"
-  	end
-  	
-  	# A silly method meant to be overriden.
-  	# should return an array, which will be then split up for cross-validating
-  	def test_data
-  	  (1..cvs).to_a
-  	end
   	
   	def split_up_data
   	  @data = []
@@ -184,7 +254,19 @@ module Experiment
   	  @data
   	end
   	
-  	private
+  	# Performs cleanup tasks
+  	def cleanup!
+  	  if @@cleanup_raw_files
+  	    FileUtils.rm Dir[@dir + "/raw-*.txt"]
+	    end
+  	end
+  	
+  	
+  	
+  	def header_column
+  	  [["cv"] + (1..cvs).to_a.map(&:to_s) + ["Mean", "Std Deviation"]]
+  	end
+  	
   	# Yields a handle to the performance table
   	def performance_f(&block) # just a simple wrapper to make code a little DRYer
   		File.open(@dir+"/performance_table.txt", "a", &block) 
@@ -196,5 +278,7 @@ module Experiment
   	   h1[key] << value
   	  end
 	  end
+
+	  
   end
 end

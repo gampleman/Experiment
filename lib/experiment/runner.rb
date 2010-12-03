@@ -1,10 +1,16 @@
 module Experiment
   
-  # This is the class behind the command line magic
+  # This is the class behind the command line magic.
+  # It is possible to use it programatically, though.
   class Runner
     
     attr_reader :options
     
+    # If you are using this programmatically you need to set these params correctly:
+    # @param [Array<String>] arg Typically the name of the experiment the operation
+    #   needs to operate on.
+    # @param [Struct, OpenStruct] opt an options object that should respond according
+    #   to the CLI.
     def initialize(arg, opt)
       @arguments, @options = arg, opt
     end
@@ -51,13 +57,13 @@ module Experiment
       end
       FileUtils::cp File.join(basedir, "generator/readme_template.txt"), File.join(dir, "README")
       FileUtils::cp File.join(basedir, "generator/Rakefile"), File.join(dir, "Rakefile")
-      FileUtils::cp File.join(basedir, "generator/experiment_template.rb"), File.join(dir, "experiments", "experiment.rb")
+      FileUtils::cp File.join(basedir, "generator/experiment_template.rb.txt"), File.join(dir, "experiments", "experiment.rb")
     end
     
     # Lists available experiments
 		def list
 		  puts "Available experiments:"
-		  puts "  " + Dir["./experiments/*"].map{|a| File.basename(a) }.join(", ")
+		  puts "  " + Dir["./experiments/*"].map{|a| File.dirname(a) }.join(", ")
 		end
 		
 		# Generates 2 files in the report directory
@@ -109,14 +115,14 @@ module Experiment
 		end 
 		
 		
-		# runs experiments passed aa arguments
+		# runs experiments passed as arguments
 		# use the -o option to override configuration
 		def run
 		  require File.dirname(__FILE__) + "/base"
 
 		  require "./experiments/experiment"
       Experiment::Config::init @options.env
-		  
+		  @options.cv = Experiment::Config.get :cross_validations, 5 if @options.cv.nil?
 		  if @options.distributed
 		    require "drb/drb"
 		    require File.dirname(__FILE__) + "/work_server"
@@ -130,15 +136,45 @@ module Experiment
 			  @arguments.each do |exp|
   			  require "./experiments/#{exp}/#{exp}"
   			  cla = eval(as_class_name(exp))
-  				experiment = cla.new :normal, exp, @options.opts, @options.env
+  				experiment = cla.new :normal, exp, @options
   				experiment.normal_run! @options.cv
   			end
 			  Notify::done
 		  end
 		end
 		
+		# Creates an IRB console useful for debugging experiments
+		# Loads up the environment for the condition passed
+		def console
+			cla = as_class_name(@arguments.first)	if @arguments.length == 1
+		  File.open("./tmp/irb-setup.rb", 'w') do |f|
+		    f.puts "Experiment::Config::init #{@options.env.inspect}"
+		    f.puts "def reload!"
+		    f.puts "  "
+		    f.puts "end"
+		    if @arguments.length == 1
+		      f.puts "def experiment"
+  		    f.puts "  @experiment ||= #{cla}.new :normal, #{@arguments.first.inspect}, OpenStruct.new(#{@options.marshal_dump})"
+  		    f.puts "end"
+  		    f.puts "experiment #load up the configs"
+  		  else
+  		    f.puts 'Dir["./app/*.rb"].each{|e| require e }'
+  		    f.puts "Experiment::Config::load '', #{options.opts.inspect}"
+		    end
+		    
+		  end
+      irb = RUBY_PLATFORM =~ /(:?mswin|mingw)/ ? 'irb.bat' : 'irb'
+      libs =  " -r irb/completion"
+      libs <<  " -r #{File.dirname(__FILE__) + "/base"}"
+      libs << " -r./experiments/experiment"
+      libs << " -r ./experiments/#{@arguments.first}/#{@arguments.first}" if @arguments.length == 1
+      libs << " -r ./tmp/irb-setup.rb"
+      puts "Loading #{@options.env} environment..."
+      exec "#{irb} #{libs} --simple-prompt"
+	  end
 		
-		# This is a Worker implementation. It requires an --address option
+		
+		# Starts a Worker implementation. It requires an --address option
 		# of it's master server and will recieve tasks (experiments and
 		# cross-validations) and compute them.
 		def worker
@@ -155,12 +191,14 @@ module Experiment
           require "./experiments/experiment"
           require "./experiments/#{exp}/#{exp}"
   			  cla = eval(as_class_name(exp))
-  				experiment = cla.new :slave, exp, @options.opts, @options.env
+  				experiment = cla.new :slave, exp, @options
   			  experiment.master = @master.instance item
   			  experiment.slave_run!
         end
       end
 	  end
+		
+		
 		
 		private
 		

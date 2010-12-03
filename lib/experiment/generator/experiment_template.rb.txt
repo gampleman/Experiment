@@ -13,8 +13,8 @@ class MyExperiment < Experiment::Base
     # 1. prepare any nessecary setup like I/O lists, etc...
     
     # 2. do the experiment
-    benchmark do
-      output << # run your code here
+    measure "(optional) label" do
+      # run your code here
     end
     
     # 3. clean up

@@ -35,6 +35,8 @@ Next you may want to analyze the data you got. For that there is the `analyze_re
 
 All of this will be also saved to disk and available for later analysis.
 
+More info: https://github.com/gampleman/Experiment/wiki/Designing-your-experiment
+
 == Creating an experimental condition
 
 Now to get to making different conditions and measuring them. First call
@@ -57,6 +59,8 @@ This will create a directory in `results` named something like `my_condition-cv5
 The experimental results and benchmarks will be written to this directory with a specification yaml file that details all conditions of the experiment.
 
 Please notice that you can provide several different conditions to the run command and it will run them sequentially, all with required options.
+
+More on the Command Line Interface: https://github.com/gampleman/Experiment/wiki/Command-Line-Interface
 
 == Configuration
 
@@ -95,6 +99,6 @@ More details: https://github.com/gampleman/Experiment/wiki/Distributed-Mode
 
 == Misc
 
-So that's pretty much the gist of experiment. There's a few other features (and a few soon to come to a gem near you ;-) Growl notifications are now supported. Turn them of by setting growl_notifications to false in your config file.
+So that's pretty much the gist of experiment. There's a few other features (and a few soon to come to a gem near you ;-) Growl notifications are now supported. Turn them off by setting growl_notifications to false in your config file.
 
 Also check out the RDocs: http://rdoc.info/github/gampleman/Experiment/master/frames

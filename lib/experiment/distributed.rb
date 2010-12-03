@@ -1,6 +1,15 @@
 module Experiment
+# this module is included in Experiment::Base
+# It incorporates most of the logic required for distributed
+# computing support.
+# @private
 module Distributed
+  # master server DRb object
   attr_accessor :master
+  
+  # Send work from the master server
+  # @return [Hash, false] either a spec what work to carry out or false 
+  #   when no work available
   def get_work()
 	  if cv = @started.index(false)
 	    @started[cv] = true
@@ -10,10 +19,12 @@ module Distributed
     end
   end
   
+  # returns true if all work has been disseminated
   def distribution_done?
     @started.all?
   end
   
+  # sends the result of the computation back to the master server
   def submit_result(cv, result, performance)
     @completed[cv] = true
     array_merge(@results, result)
@@ -22,7 +33,8 @@ module Distributed
     master_done! if @completed.all?
   end
   
-  
+  # Main function. Will continously request work from the server,
+  # execute it and send back results, then loops to the beggining.
   def slave_run!
     while work = @master.get_work
       puts work.inspect
@@ -41,7 +53,7 @@ module Distributed
 
   end
   
-  
+  # Strats up the master server
   def master_run!(cv)
     
     @cvs = cv || 1
@@ -49,15 +61,17 @@ module Distributed
 		Notify.started @experiment
     split_up_data
 		write_dir!
-		specification!
 		@completed = (1..@cvs).map {|a| false }
 		@started = @completed.dup
   end
   
+  # Cleans up the master server after all work is done
   def master_done!
     @done = true
+    specification! true
     summarize_performance!
 		summarize_results! @results
+		cleanup!
 		Notify.completed @experiment
 		
 		#sleep 1

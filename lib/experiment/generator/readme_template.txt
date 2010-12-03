@@ -10,12 +10,12 @@ doc
 experiments
  - This directory includes all experiments that were coded. They generally `require` 
    files from the reference implementation and add modifications of there own. 
-   Each is explained in its `about.md` file.
+   Each is explained in it's RDoc header.
 report
  - Source files used to create the report (multi-markdown format, see http://fletcherpenney.net/multimarkdown).
 results
  - Has all the measurements from individual experiments. Naming convention: 
-   {name}-{classes}-cv{number of cross validations}-{shortened timestamp}.
+   {name}-cv{number of cross validations}-{shortened timestamp}.
 test
  - Unit tests.
 tmp

@@ -21,11 +21,12 @@ class App
     @options.verbose = false
     @options.quiet = false
 		@options.env = :development
-		@options.cv = 5
+		@options.cv = nil#5
 		@options.description = ""
 		@options.opts = ""
     @options.distributed = false
     @options.master = "localhost"
+    @options.summary = false
   end
 
   # Parse options, check arguments, then process the command
@@ -64,6 +65,7 @@ class App
       end
       @opts.on('-D', '--distributed', "Run with a distributed computing mode. This will be the master server/work cue.")	{  @options.distributed = true }
       @opts.on('-a', '--address MODE', String, "Address to the master machine.")	{ |v| @options.master = v }
+      @opts.on('--summary', "After a run of the experiment print out the summary to STDOUT.") { @options.summary = true }
       @opts.parse!(@arguments) #rescue return false
       
       process_options
@@ -107,7 +109,7 @@ for a new experiment"
       parser = RDoc::Parser.for top_level, File.dirname(__FILE__) + "/../lib/experiment/runner.rb", File.read(File.dirname(__FILE__) + "/../lib/experiment/runner.rb"), opts, stats
       d = parser.scan
       d.modules.first.classes.first.method_list.each do |m|
-        if m.comment != ""
+        unless m.comment == "" || m.name == 'initialize' || m.name == 'new'
           puts "== #{m.name == 'new_project' ? 'new' : m.name}"
           puts m.comment
           puts
