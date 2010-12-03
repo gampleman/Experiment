@@ -1,3 +1,5 @@
 pkg/*
 pkg/**/*
 script/*
+.yardoc/**/*
+.yardoc/*
