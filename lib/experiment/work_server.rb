@@ -19,6 +19,7 @@ module Experiment
       DRb.thread.join
     end
     
+    # @deprecated
     def ready? # TODO: get rid of this
       true
     end

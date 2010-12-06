@@ -3,6 +3,9 @@ module Experiment
   
   # This is the class behind the command line magic.
   # It is possible to use it programatically, though.
+  # @see https://github.com/gampleman/Experiment/wiki/Command-Line-Interface
+  # @example For documentation on the CLI run
+  #   experiment -h
   class Runner
     
     attr_reader :options

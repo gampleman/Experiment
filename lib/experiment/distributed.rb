@@ -2,36 +2,15 @@ module Experiment
 # this module is included in Experiment::Base
 # It incorporates most of the logic required for distributed
 # computing support.
+# @see https://github.com/gampleman/Experiment/wiki/Distributed-Mode
 # @private
 module Distributed
+  
+  
+  # @group Called on slave
+  
   # master server DRb object
   attr_accessor :master
-  
-  # Send work from the master server
-  # @return [Hash, false] either a spec what work to carry out or false 
-  #   when no work available
-  def get_work()
-	  if cv = @started.index(false)
-	    @started[cv] = true
-	    {:cv => cv, :input => @data[cv], :dir => @dir, :options => Experiment::Config.to_hash }
-	  else
-	    false
-    end
-  end
-  
-  # returns true if all work has been disseminated
-  def distribution_done?
-    @started.all?
-  end
-  
-  # sends the result of the computation back to the master server
-  def submit_result(cv, result, performance)
-    @completed[cv] = true
-    array_merge(@results, result)
-    @abm << performance
-    Notify.cv_done @experiment, cv
-    master_done! if @completed.all?
-  end
   
   # Main function. Will continously request work from the server,
   # execute it and send back results, then loops to the beggining.
@@ -53,6 +32,40 @@ module Distributed
     end
 
   end
+  
+  
+  # @endgroup
+  
+  # @group Called on master
+  
+  # Send work from the master server
+  # @return [Hash, false] either a spec what work to carry out or false 
+  #   when no work available
+  def get_work()
+	  if cv = @started.index(false)
+	    @started[cv] = true
+	    {:cv => cv, :input => @data[cv], :dir => @dir, :options => Experiment::Config.to_hash }
+	  else
+	    false
+    end
+  end
+  
+  # returns true if all work has been disseminated
+  def distribution_done?
+    @started.all?
+  end
+  
+  # Sends the result of the computation back to the master server.
+  # Called on the master server object.
+  def submit_result(cv, result, performance)
+    @completed[cv] = true
+    array_merge(@results, result)
+    @abm << performance
+    Notify.cv_done @experiment, cv
+    master_done! if @completed.all?
+  end
+  
+  
   
   # Strats up the master server
   def master_run!(cv)
@@ -78,5 +91,8 @@ module Distributed
 		#sleep 1
     #DRb.stop_service
   end
+  
+  # @endgroup
+  
 end
 end
