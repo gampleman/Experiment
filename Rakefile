@@ -15,7 +15,7 @@ $hoe = Hoe.spec 'experiment' do
   #self.post_install_message = 'PostInstall.txt' # TODO remove if post-install message not required
   self.rubyforge_name       = self.name # TODO this is default value
   #self.extra_deps         = [['ruby-growl','>= 1.0']]
-
+  self.summary = "Experiment framework"
 end
 
 require 'newgem/tasks'

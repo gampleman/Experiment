@@ -2,12 +2,51 @@ require "CSV"
 require File.dirname(__FILE__) + "/params"
 
 module Experiment
-  class Parametrized < Base
+  class Factorial < Base
+    
+    
+    class << self # Class Methods
+  	  # Specify a parameter that will be used as a factor in the experiment
+    	# @example
+    	#   param :decay_rate, [0.1, 0.3, 0.7]
+    	#   param :photons, [5, 10]
+    	#   # runs these 6 experiments:
+    	#   # | decay_rate | photons
+    	#   # |        0.1 |   5
+    	#   # |        0.1 |  10
+    	#   # |        0.3 |   5
+    	#   # |        0.3 |  10
+    	#   # |        0.7 |   5
+    	#   # |        0.7 |  10
+    	# @example Contrived example of block usage
+    	#   param :user_iq do
+    	#     mean = gets "How much is 1 + 1?"
+    	#     if mean == '2'
+    	#       (100..160).to_a
+    	#     else
+    	#       (20..30).to_a
+    	#     end
+    	#   end
+    	# @see Params
+    	def param(name, value = nil, &block)
+    	  @@params ||= {}
+    	  if block_given?
+    	    @@params[name] = block.call
+  	    else
+  	      @@params[name] = value
+        end
+  	  end
+
+  	  alias_method :independent_variable, :param
+  	end
+    
+    attr_accessor :parent_dir
     
     def initialize(*args)
       super(*args)
       @params ||= {}
     end
+    
     
     # runs the whole experiment
   	def normal_run!(cv)
@@ -52,36 +91,8 @@ module Experiment
   		puts File.read(@dir + "/summary.mmd") if @options.summary
   	end
   	
-  	# Specify a parameter that will be used as a factor in the experiment
-  	# @example
-  	#   param :decay_rate, [0.1, 0.3, 0.7]
-  	#   param :photons, [5, 10]
-  	#   # runs these 6 experiments:
-  	#   # | decay_rate | photons
-  	#   # |        0.1 |   5
-  	#   # |        0.1 |  10
-  	#   # |        0.3 |   5
-  	#   # |        0.3 |  10
-  	#   # |        0.7 |   5
-  	#   # |        0.7 |  10
-  	# @example Contrived example of block usage
-  	#   param :user_iq do
-  	#     mean = gets "How much is 1 + 1?"
-  	#     if mean == '2'
-  	#       (100..160).to_a
-  	#     else
-  	#       (20..30).to_a
-  	#     end
-  	#   end
-  	# @see Params
-  	def self.param(name, value = nil, &block)
-  	  @@params ||= {}
-  	  if block_given?
-  	    @@params[name] = block.call
-	    else
-	      @@params[name] = value
-      end
-	  end
+  	
+  	
 	  
 	  protected
 	  
@@ -163,5 +174,54 @@ module Experiment
       end
       out.join split
     end
+    
+    # This module is a basis for the distributed implementation
+    # it is a WiP
+    module DistributedFactorial
+      def master_sub_experiments(cv)
+        write_dir!
+        param_grid.map do |paramset|
+          if @options.opts == ""
+            @options.opts = paramset.map {|k,v| "#{k}:#{v}"}.join(",")
+          else
+            @options.opts += "," + paramset.map {|k,v| "#{k}:#{v}"}.join(",")
+          end
+          child = self.class.new :master, @experiment, @options
+          child.parent_dir = @dir
+          child.master_run! cv
+          child
+        end
+      end
+
+
+
+      # Strats up the master server
+      def master_run!(cv)
+        @dir = "#{parent_dir}/#{@options.opts}"
+    		Dir.mkdir @dir
+        @cvs = cv || 1
+        @results = {}
+    		#Notify.started @experiment
+        split_up_data
+    		#write_dir!
+    		exps = param_grid.product((1..@cvs).to_a)
+    		@completed = Hash[*exps.map {|a| [a, false] }.flatten]
+    		@started = @completed.dup
+      end
+
+      # Cleans up the master server after all work is done
+      def master_done!
+        @done = true
+        specification! true
+        summarize_performance!
+    		summarize_results! @results
+    		cleanup!
+    		#Notify.completed @experiment
+
+    		#sleep 1
+        #DRb.stop_service
+      end
+    end
+    
   end
 end

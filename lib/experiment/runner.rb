@@ -1,3 +1,4 @@
+require File.dirname(__FILE__) + "/config"
 module Experiment
   
   # This is the class behind the command line magic.

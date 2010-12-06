@@ -31,9 +31,16 @@ module Experiment
           require "./experiments/#{exp}/#{exp}"
   			  cla = eval(as_class_name(exp))
   				experiment = cla.new :master, exp, @options
-  				experiment.master_run! @options.cv
-  				@experiment_instances[i] = experiment
-  				return i
+  				if experiment.respond_to? :master_sub_experiments
+  				  subs = experiment.master_sub_experiments @options.cv
+  				  @experiments += subs.map { exp }
+  				  @experiment_instances += subs
+  				  return i + 1
+				  else
+  				  experiment.master_run! @options.cv
+  				  @experiment_instances[i] = experiment
+  				  return i
+  				end
   			elsif !@experiment_instances[i].distribution_done?
           return i
         end

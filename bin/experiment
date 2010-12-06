@@ -58,16 +58,33 @@ class App
       @opts.on('-V', '--verbose')    { @options.verbose = true }  
       @opts.on('-q', '--quiet')      { @options.quiet = true }
 			@opts.on('-e', '--env [ENV]', [:development, :compute], "Sets the environment to run in.")	{ |v| @options.env = v }
-			@opts.on('-c', '--cv CV', Integer, "The number of cross validations to run.")	{ |v| @options.cv = v }
-      @opts.on('-m', '--description M', String, "Description or hypothesis for the condition being generated.")      { |v| @options.description = v }
-      @opts.on('-o', '--options OPTSTRING', String, "Options to override config with. key1:val1,key2:val2") do |v|
-        @options.opts = v
+			
+			if ARGV.first == 'generate' || ARGV.first == "-h"
+			  @opts.separator ""
+        @opts.separator "Options for `generate`:"
+			  @opts.on('-m', '--description M', String, "Description or hypothesis for the condition being generated.")      { |v| @options.description = v }
+			end
+			
+			if ARGV.first == 'run' || ARGV.first == "-h"
+			  @opts.separator ""
+        @opts.separator "Options for `run`:"
+			  @opts.on('-c', '--cv CV', Integer, "The number of cross validations to run.")	{ |v| @options.cv = v }
+			  @opts.on('-o', '--options OPTSTRING', String, "Options to override or define configuration with.", "format as:  key1:val1,key2:val2") do |v|
+          @options.opts = v
+        end
+        @opts.on('--summary', "After a run of the experiment print out the summary to STDOUT.") { @options.summary = true }
+        @opts.on('-D', '--distributed', "Run with a distributed computing mode.", "This will be the master server/work cue.")	{  @options.distributed = true }
+        @opts.separator "  Overrideable options (defined in config/config.yaml)"
+        @opts.separator "    No options defined." unless Experiment::Config::parsing_for_options(@opts, @options)
       end
-      @opts.on('-D', '--distributed', "Run with a distributed computing mode. This will be the master server/work cue.")	{  @options.distributed = true }
-      @opts.on('-a', '--address MODE', String, "Address to the master machine.")	{ |v| @options.master = v }
-      @opts.on('--summary', "After a run of the experiment print out the summary to STDOUT.") { @options.summary = true }
-      @opts.parse!(@arguments) #rescue return false
       
+      if ARGV.first == 'worker' || ARGV.first == "-h"
+			  @opts.separator ""
+        @opts.separator "Options for `worker`:"
+        @opts.on('-a', '--address MODE', String, "Address to the master machine.")	{ |v| @options.master = v }
+      end
+      
+      @opts.parse!(@arguments) #rescue return false
       process_options
       true      
     end

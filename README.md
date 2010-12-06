@@ -1,15 +1,12 @@
-= Experiment
-* http://github.com/gampleman/experiment
-
-== What's it about?
+## What's it about?
 
 Experiment is a ruby library and environment for running scientific experiments (eg. AI, GA...), especially good for experiments in optimizing results by variations in algorithm or parameters.
 
-== Installation
+## Installation
 
     $ sudo gem install experiment
 
-== Getting started
+## Getting started
 
 Experiment is modeled after rails and the workflow should be recognizable enough.
 
@@ -21,23 +18,23 @@ This will create several files and directories. We will shortly introduce you to
 
 First off is the `app` directory. This is where a basic implementation of what you mean to do. You can write your code however you want, just make sure the code is well structured - you will be overriding this later in your experiments.
 
-== Setting up an experiment
+## Setting up an experiment
 
 Experiments are set up in the experiments directory. The first thing you need to do is define what consist an experiment in your case. For this open up the file `experiments/experiment.rb`. You will notice that this file contains a bunch of comments and a stub letting you easily understand what to do.
 
-For a typical experiment you will need to do some setup work (eg. initialize your classes, calculate parametres, etc.), run the experiment and maybe do cleanup (remove temp. files).
+For a typical experiment you will need to do some setup work (eg. initialize your classes, calculate parameters, etc.), run the experiment and maybe do cleanup (remove temp. files).
 
-You do all this work in the `run_the_experiment` method. Use the `measure` method to wrap your measurements. These will be autmatically benchmarked and their ouput will be automatically saved to the results directory for further analysis.
+You do all this work in the `run_the_experiment` method. Use the `measure` method to wrap your measurements. These will be automatically benchmarked and their output will be automatically saved to the results directory for further analysis.
 
-The `test_data` method lets you specify an array of data points that you want split for cross-validation (see below). This will be passed to in `run_the_experiment` in the input variable.
+The `data_set` method lets you specify an array of data points that you want split for cross-validation. You can access this in your experiment with `test_data`.
 
 Next you may want to analyze the data you got. For that there is the `analyze_result!` method which has 2 arguments. One is the raw data file that was output by your code and the other is the path to an expected output file (this can be very rich in detail, ideal for confusion matrices and the like). The method should return a hash of summary results (eg. `:total_performance => 16`).
 
 All of this will be also saved to disk and available for later analysis.
 
-More info: https://github.com/gampleman/Experiment/wiki/Designing-your-experiment
+More info [on the wiki](https://github.com/gampleman/Experiment/wiki/Designing-your-experiment).
 
-== Creating an experimental condition
+## Creating an experimental condition
 
 Now to get to making different conditions and measuring them. First call
 
@@ -48,7 +45,7 @@ This will create a directory in `experiments` based on the name you provide (in 
 
 Also notice that the description you provided is stored as a comment in that file. You can expand your hypothesis as you work on the file and it will be included in your report automatically.
 
-== Running the experiment
+## Running the experiment
 
 Once you make the desired changes you can run the experiment with:
 
@@ -60,9 +57,9 @@ The experimental results and benchmarks will be written to this directory with a
 
 Please notice that you can provide several different conditions to the run command and it will run them sequentially, all with required options.
 
-More on the Command Line Interface: https://github.com/gampleman/Experiment/wiki/Command-Line-Interface
+More on the [Command Line Interface](https://github.com/gampleman/Experiment/wiki/Command-Line-Interface).
 
-== Configuration
+## Configuration
 
 So far we have been talking mainly about variations in the source code of the experiments. But what if you just want to tweak a few parameters? There is always the almighty *Config* class to the rescue. 
 
@@ -70,24 +67,24 @@ So far we have been talking mainly about variations in the source code of the ex
     
 You have a config directory containing a `config.yaml` file. This file contains several environments. The idea is that you might want to tweak your options differently when running on your laptop then when running on a university supercomputer. Experiments also have their own config file that override the global.
 
-More info: https://github.com/gampleman/Experiment/wiki/Configuration
+More info on [the wiki](https://github.com/gampleman/Experiment/wiki/Configuration).
 
 
 
-== Cross Validation
+## Cross Validation
 
-Cross validation (CV) is one of the most crucial research methods in CS and AI. For that reason it is built right in. You specify how many CVs you want to run using the --cv flag and your data is automatically split up for you and the experiment is run for each CV with the appropriate data.
+*Cross validation* (CV) is one of the most crucial research methods in CS and AI. For that reason it is built right in. You specify how many CVs you want to run using the --cv flag and your data is automatically split up for you and the experiment is run for each CV with the appropriate data.
 
-== Reporting Results
+## Reporting Results
 
     $ experiment report
 
-Surprise, surprise. This will create two files in your `report` directory (BTW, this directory is also meant for you to store your report or paper draft). The first is methods.mmd. This takes all the stuff you wrote in the beginnings of your experimental condition files and creates a multi-markdown (http://fletcherpenney.net/multimarkdown/) file out of them (I chose multi-markdown for it's LaTEX support and also it is directly importable into Scrivener, my writing application of choice, available at http://www.literatureandlatte.com/scrivener.html).  
+Surprise, surprise. This will create two files in your `report` directory (BTW, this directory is also meant for you to store your report or paper draft). The first is methods.mmd. This takes all the stuff you wrote in the beginnings of your experimental condition files and creates a [multi-markdown](http://fletcherpenney.net/multimarkdown/) file out of them (I chose multi-markdown for it's LaTEX support and also it is directly importable into Scrivener, my writing application of choice, available at <http://www.literatureandlatte.com/scrivener.html>).  
 
 The second file created is the `data.csv` file which contains the data from all your experiments. It should be importable to Numbers, Excel even Matlab for further analysis and charting.
 
 
-== Distributed computing support
+## Distributed computing support
 
 Newly this library supports a simple distributed model of running experiments. Setup worker computers with the 
 
@@ -95,10 +92,10 @@ Newly this library supports a simple distributed model of running experiments. S
     
 and then run experiments with --distributed flag.
 
-More details: https://github.com/gampleman/Experiment/wiki/Distributed-Mode
+More details: <https://github.com/gampleman/Experiment/wiki/Distributed-Mode>.
 
-== Misc
+## Misc
 
 So that's pretty much the gist of experiment. There's a few other features (and a few soon to come to a gem near you ;-) Growl notifications are now supported. Turn them off by setting growl_notifications to false in your config file.
 
-Also check out the RDocs: http://rdoc.info/github/gampleman/Experiment/master/frames
+Also check out the [RDocs](http://rdoc.info/github/gampleman/Experiment/master/frames).

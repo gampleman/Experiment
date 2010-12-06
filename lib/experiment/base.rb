@@ -23,6 +23,9 @@ module Experiment
     attr_reader :current_cv
     # The number of overall cross-validations
     attr_reader :cvs
+    # The file the program is currently set to output to.
+    # Use this if you want to write additional data.
+    attr_reader :output_file
     
     # Called internally by the framewrok
     # @private
@@ -30,11 +33,12 @@ module Experiment
     # @param [String] experiment name
   	def initialize(mode, experiment, options)
   		@experiment = experiment
+  		@options = options
   		case mode
   		  
   		when :normal
   		  @abm = [] 
-  		  @options = options
+  		  
 		  when :master
 		    @abm = []
 		    extend DRb::DRbUndumped
@@ -86,7 +90,7 @@ module Experiment
   			@current_cv = cv_num
   			File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
   			  @ouptut_file = output
-  			    run_the_experiment(@data[cv_num], output)
+  			    run_the_experiment
   			end
   			array_merge @results, analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt")
   			write_performance!
@@ -100,6 +104,18 @@ module Experiment
   		puts File.read(@dir + "/summary.mmd") if @options.summary
   	end
     
+    # Returns the portion of the {data_set} that corresponds 
+    # to the current cross validation number.
+    # @return [Array]
+    def test_data
+      @data[@current_cv]
+    end
+    
+    # Returns the {data_set} that *without* the {test_data}.
+    # @return [Array]
+    def training_data
+      (@data - test_data).flatten
+    end
     
     # Use this every time you want to do a measurement.
     # It will be put on the record file and benchmarked
@@ -173,7 +189,7 @@ module Experiment
   	# A silly method meant to be overriden.
   	# should return an array, which will be then split up for cross-validating.
   	# @abstract Override this method to return an array.
-  	def test_data
+  	def data_set
   	  (1..cvs).to_a
   	end
   	
@@ -247,7 +263,7 @@ module Experiment
   	
   	def split_up_data
   	  @data = []
-  	  test_data.each_with_index do |item, i|
+  	  data_set.each_with_index do |item, i|
   	    @data[i % cvs] ||= []
   	    @data[i % cvs] << item
   	  end

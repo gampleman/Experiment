@@ -13,7 +13,7 @@ module Distributed
   def get_work()
 	  if cv = @started.index(false)
 	    @started[cv] = true
-	    {:cv => cv, :input => @data[cv], :dir => @dir, :options => Experiment::Config.to_h }
+	    {:cv => cv, :input => @data[cv], :dir => @dir, :options => Experiment::Config.to_hash }
 	  else
 	    false
     end
@@ -42,9 +42,10 @@ module Distributed
       @current_cv = work[:cv]
 
       @dir = work[:dir]
+      #@data = work[:input]
       File.open(@dir + "/raw-#{@current_cv}.txt", "w") do |output|
 			  @ouptut_file = output
-			  run_the_experiment(work[:input], output)
+			  run_the_experiment
 			end
 			result = analyze_result!(@dir + "/raw-#{@current_cv}.txt", @dir + "/analyzed-#{@current_cv}.txt")
 			write_performance!

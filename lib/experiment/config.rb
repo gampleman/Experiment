@@ -158,6 +158,35 @@ module Experiment
 	      @config
       end
 	    
+	    # Reads all the keys in config/config.yaml and provides
+	    # optparse blocks for them.
+	    # @private
+	    # @param [OptParse] o Optparse instance to define options on.
+	    # @param [OStruct] options The Options instance where to save parsed 
+	    #   config and get reserved names from.
+	    # @return [Boolean] Returns true if some parses were set.
+	    def parsing_for_options(o, options)
+	      return unless File.exists? "./config/config.yaml"
+	      conf = YAML::load_file("./config/config.yaml")
+        num = 0
+	      conf["environments"].each do |env, keys|
+	        (keys || []).each do |key, value|
+	          next if options.marshal_dump.keys.include? key.to_sym
+	          #puts env.inspect, key.inspect, value.inspect
+	          num += 1
+	          cl = value.class == Fixnum ? Integer : value.class;
+	          o.on("--#{key} VALUE", cl, "Default value #{value.inspect}") do |v| 
+	            if options.opts == ""
+	              options.opts = "#{key}: #{v}"
+	            else
+	              options.opts += ", #{key}: #{v}"
+              end
+            end
+          end
+        end
+        num > 0
+	    end
+	    
 	    # @return [String]
 	    def inspect
 	      "Experiment::Config \"" + @config.to_a.map {|k,v| "#{k}: #{v}"}.join(", ") + '"'
