@@ -33,10 +33,10 @@ module Experiment
 			  req_file.puts "# The first contious block of comment will be included in your report."
 			  req_file.puts "# This includes the reference implementation."
 			  req_file.puts "# Override any desired files in this directory."
-			  Dir["./app/**/*.{rb,o,dll,so}"].each do |f|
+			  Dir["./app/**/*.{rb,o,dll,so,bundle}"].each do |f|
 			    next if File.basename(f) == 'extconfig.rb'
 			    p = File.expand_path(f).split("/") - File.expand_path(".").split("/")
-			    req_file.puts "require \"#{p.join("/").gsub(/\.(rb|o|dll|so)$/, "")}\""
+			    req_file.puts "require \"#{p.join("/").gsub(/\.(rb|o|dll|so|bundle)$/, "")}\""
 			  end
 			  req_file.puts "\nclass #{as_class_name @arguments.first} < MyExperiment\n\t\nend"
 			end
@@ -164,7 +164,7 @@ module Experiment
   		    f.puts "end"
   		    f.puts "experiment #load up the configs"
   		  else
-  		    f.puts 'Dir["./app/*.{rb,o,so,dll}"].each{|e| require e.gsub(/\.(rb|so|o|dll)$/, '') }'
+  		    f.puts 'Dir["./app/**/*.{rb,o,so,dll,bundle}"].each{|e| require e.gsub(/\.(rb|so|o|dll|bundle)$/, "") }'
   		    f.puts "Experiment::Config::load '', #{options.opts.inspect}"
 		    end
 		    
