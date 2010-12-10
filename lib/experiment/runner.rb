@@ -33,9 +33,10 @@ module Experiment
 			  req_file.puts "# The first contious block of comment will be included in your report."
 			  req_file.puts "# This includes the reference implementation."
 			  req_file.puts "# Override any desired files in this directory."
-			  Dir["./app/**/*.rb"].each do |f|
-			    p = f.split("/") - File.expand_path(".").split("/")
-			    req_file.puts "require File.dirname(__FILE__) + \"/../../#{p.join("/")}\""
+			  Dir["./app/**/*.{rb,o,dll,so}"].each do |f|
+			    next if File.basename(f) == 'extconfig.rb'
+			    p = File.expand_path(f).split("/") - File.expand_path(".").split("/")
+			    req_file.puts "require \"#{p.join("/").gsub(/\.(rb|o|dll|so)$/, "")}\""
 			  end
 			  req_file.puts "\nclass #{as_class_name @arguments.first} < MyExperiment\n\t\nend"
 			end
@@ -125,6 +126,7 @@ module Experiment
 		  require File.dirname(__FILE__) + "/base"
 
 		  require "./experiments/experiment"
+		  $: << "./"
       Experiment::Config::init @options.env
 		  @options.cv = Experiment::Config.get :cross_validations, 5 if @options.cv.nil?
 		  if @options.distributed
@@ -152,17 +154,17 @@ module Experiment
 		def console
 			cla = as_class_name(@arguments.first)	if @arguments.length == 1
 		  File.open("./tmp/irb-setup.rb", 'w') do |f|
+		    f.puts "# Initializes the environment for IRb."
 		    f.puts "Experiment::Config::init #{@options.env.inspect}"
-		    f.puts "def reload!"
-		    f.puts "  "
-		    f.puts "end"
+		    f.puts "$: << '#{File.expand_path(".")}/'"
 		    if @arguments.length == 1
+		      f.puts "require 'experiments/#{@arguments.first}/#{@arguments.first}'"
 		      f.puts "def experiment"
   		    f.puts "  @experiment ||= #{cla}.new :normal, #{@arguments.first.inspect}, OpenStruct.new(#{@options.marshal_dump})"
   		    f.puts "end"
   		    f.puts "experiment #load up the configs"
   		  else
-  		    f.puts 'Dir["./app/*.rb"].each{|e| require e }'
+  		    f.puts 'Dir["./app/*.{rb,o,so,dll}"].each{|e| require e.gsub(/\.(rb|so|o|dll)$/, '') }'
   		    f.puts "Experiment::Config::load '', #{options.opts.inspect}"
 		    end
 		    
@@ -171,7 +173,6 @@ module Experiment
       libs =  " -r irb/completion"
       libs <<  " -r #{File.dirname(__FILE__) + "/base"}"
       libs << " -r./experiments/experiment"
-      libs << " -r ./experiments/#{@arguments.first}/#{@arguments.first}" if @arguments.length == 1
       libs << " -r ./tmp/irb-setup.rb"
       puts "Loading #{@options.env} environment..."
       exec "#{irb} #{libs} --simple-prompt"
