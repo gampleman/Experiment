@@ -185,6 +185,7 @@ module Experiment
 		def worker
 		  require "drb/drb"
 		  require File.dirname(__FILE__) + "/base"
+		  $: << "./"
 		  Experiment::Config::init @options.env
 		  loop do
 		    @server_uri="druby://#{@options.master}:8787"
