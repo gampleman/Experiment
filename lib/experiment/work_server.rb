@@ -38,7 +38,7 @@ module Experiment
   				  @experiment_instances += subs
   				  return i + 1
 				  else
-  				  experiment.master_run! @options.cv
+  				  experiment.run! @options.cv
   				  @experiment_instances[i] = experiment
   				  return i
   				end

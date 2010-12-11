@@ -2,7 +2,8 @@ require File.dirname(__FILE__) + "/notify"
 require File.dirname(__FILE__) + "/stats/descriptive"
 require File.dirname(__FILE__) + "/config"
 require File.dirname(__FILE__) + "/params"
-require File.dirname(__FILE__) + "/distributed"
+require File.dirname(__FILE__) + "/distributed/slave"
+require File.dirname(__FILE__) + "/distributed/master"
 require 'benchmark'
 require "drb/drb"
 require "yaml"
@@ -12,8 +13,6 @@ module Experiment
   # @author Jakub Hampl
   # @see https://github.com/gampleman/Experiment/wiki/Designing-your-experiment
   class Base
-
-    include Distributed
     
     @@cleanup_raw_files = false
     
@@ -30,22 +29,24 @@ module Experiment
     # Called internally by the framewrok
     # @private
     # @param [:normal, :master, :slave] mode
-    # @param [String] experiment name
+    # @param [String] experiment Name of the experimental condition.
+    # @param [OpenStruct] options Most of the options passed from the CLI.
   	def initialize(mode, experiment, options)
   		@experiment = experiment
   		@options = options
+  		# a bit of dependency injection here
   		case mode
-  		  
   		when :normal
   		  @abm = [] 
-  		  
 		  when :master
 		    @abm = []
 		    extend DRb::DRbUndumped
+		    extend Distributed::Master
 		    @done = false
 	    when :slave
-		    
+		    extend Distributed::Slave
   		end
+  		
   		Experiment::Config::load(experiment, options.opts, options.env)
   		@mode = mode
   	end
@@ -79,7 +80,7 @@ module Experiment
     
     # runs the whole experiment, called by the framework
     # @private
-  	def normal_run!(cv)
+  	def run!(cv)
   		@cvs = cv || 1
       @results = {}
   		Notify.started @experiment

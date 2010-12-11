@@ -143,7 +143,7 @@ module Experiment
   			  require "./experiments/#{exp}/#{exp}"
   			  cla = eval(as_class_name(exp))
   				experiment = cla.new :normal, exp, @options
-  				experiment.normal_run! @options.cv
+  				experiment.run! @options.cv
   			end
 			  Notify::done
 		  end
@@ -199,7 +199,7 @@ module Experiment
   			  cla = eval(as_class_name(exp))
   				experiment = cla.new :slave, exp, @options
   			  experiment.master = @master.instance item
-  			  experiment.slave_run!
+  			  experiment.run! 0
         end
       end
 	  end

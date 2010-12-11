@@ -12,7 +12,8 @@ lib/experiment/generator/Rakefile
 lib/experiment/base.rb
 lib/experiment/notify.rb
 lib/experiment/work_server.rb
-lib/experiment/distributed.rb
+lib/experiment/distributed/master.rb
+lib/experiment/distributed/slave.rb
 lib/experiment/factorial.rb
 lib/experiment/params.rb
 test/test_experiment.rb
