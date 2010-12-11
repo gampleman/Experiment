@@ -1,10 +1,12 @@
-## What's it about?
+# Experiment
 
 Experiment is a ruby library and environment for running scientific experiments (eg. AI, GA...), especially good for experiments in optimizing results by variations in algorithm or parameters.
 
 ## Installation
 
     $ sudo gem install experiment
+    
+Also make sure you are running the latest version `gem update experiment`.
 
 ## Getting started
 
@@ -32,7 +34,7 @@ Next you may want to analyze the data you got. For that there is the `analyze_re
 
 All of this will be also saved to disk and available for later analysis.
 
-More info [on the wiki](https://github.com/gampleman/Experiment/wiki/Designing-your-experiment).
+[More on Designing your experiment](https://github.com/gampleman/Experiment/wiki/Designing-your-experiment).
 
 ## Creating an experimental condition
 
@@ -57,7 +59,7 @@ The experimental results and benchmarks will be written to this directory with a
 
 Please notice that you can provide several different conditions to the run command and it will run them sequentially, all with required options.
 
-More on the [Command Line Interface](https://github.com/gampleman/Experiment/wiki/Command-Line-Interface).
+[More on the Command Line Interface](https://github.com/gampleman/Experiment/wiki/Command-Line-Interface).
 
 ## Configuration
 
@@ -67,7 +69,7 @@ So far we have been talking mainly about variations in the source code of the ex
     
 You have a config directory containing a `config.yaml` file. This file contains several environments. The idea is that you might want to tweak your options differently when running on your laptop then when running on a university supercomputer. Experiments also have their own config file that override the global.
 
-More info on [the wiki](https://github.com/gampleman/Experiment/wiki/Configuration).
+[More info on configuration](https://github.com/gampleman/Experiment/wiki/Configuration).
 
 
 
@@ -79,7 +81,7 @@ More info on [the wiki](https://github.com/gampleman/Experiment/wiki/Configurati
 
     $ experiment report
 
-Surprise, surprise. This will create two files in your `report` directory (BTW, this directory is also meant for you to store your report or paper draft). The first is methods.mmd. This takes all the stuff you wrote in the beginnings of your experimental condition files and creates a [multi-markdown](http://fletcherpenney.net/multimarkdown/) file out of them (I chose multi-markdown for it's LaTEX support and also it is directly importable into Scrivener, my writing application of choice, available at <http://www.literatureandlatte.com/scrivener.html>).  
+Surprise, surprise. This will create two files in your `report` directory (BTW, this directory is also meant for you to store your report or paper draft). The first is methods.mmd. This takes all the stuff you wrote in the beginnings of your experimental condition files and creates a [multi-markdown](http://fletcherpenney.net/multimarkdown/) file out of them (I chose multi-markdown for it's LaTEX support and also it is directly importable into Scrivener, my writing application of choice, available at [Literature & Latte](http://www.literatureandlatte.com/scrivener.html)).  
 
 The second file created is the `data.csv` file which contains the data from all your experiments. It should be importable to Numbers, Excel even Matlab for further analysis and charting.
 
@@ -92,7 +94,7 @@ Newly this library supports a simple distributed model of running experiments. S
     
 and then run experiments with --distributed flag.
 
-More details: <https://github.com/gampleman/Experiment/wiki/Distributed-Mode>.
+[More details on Distributed mode](https://github.com/gampleman/Experiment/wiki/Distributed-Mode).
 
 ## Misc
 
