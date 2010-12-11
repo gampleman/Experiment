@@ -95,6 +95,7 @@ module Experiment
       end
     
       def show_if_needed
+        return unless @out
         if @total.zero?
           cur_percentage = 100
           prev_percentage = 0
@@ -113,22 +114,22 @@ module Experiment
     
     
       def show
-        percent = @current  * 100 / @total
-        bar_width = percent * @terminal_width / 100
-        line = sprintf "%3d%% |%s%s| %s", percent, "=" * bar_width, "-" * (@terminal_width - bar_width), stat
+        percent = @current  * 100.0 / @total
+        bar_width = percent * @terminal_width / 100.0
+        line = sprintf "%3d%% |%s%s| %s", percent, "=" * bar_width.floor, "-" * (@terminal_width - bar_width.ceil), stat
       
 
-        width = get_width
-        if line.length == width - 1 
+        #width = get_width
+        #if line.length == width - 1 
           @out.print(line +  (@finished_p ? "\n" : "\r"))
           @out.flush
-        elsif line.length >= width
-          @terminal_width = [@terminal_width - (line.length - width + 1), 0].max
-          if @terminal_width == 0 then @out.print(line + eol) else show end
-        else # line.length < width - 1
-          @terminal_width += width - line.length + 1
-          show
-        end
+        #elsif line.length >= width
+        #  @terminal_width = [@terminal_width - (line.length - width + 1), 0].max
+        #  if @terminal_width == 0 then @out.print(line + (@finished_p ? "\n" : "\r")) else show end
+        #else # line.length < width - 1
+        #  @terminal_width += width - line.length + 1
+        #  show
+        #end
         @previous_time = Time.now
       end
     

@@ -65,7 +65,7 @@ class App
 			  @opts.on('-m', '--description M', String, "Description or hypothesis for the condition being generated.")      { |v| @options.description = v }
 			end
 			
-			if ARGV.first == 'run' || ARGV.first == "-h"
+			if ARGV.first == 'run' || ARGV.first == "-h" || ARGV.first == 'console'
 			  @opts.separator ""
         @opts.separator "Options for `run`:"
 			  @opts.on('-c', '--cv CV', Integer, "The number of cross validations to run.")	{ |v| @options.cv = v }

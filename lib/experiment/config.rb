@@ -62,6 +62,7 @@ module Experiment
   				exp = YAML::load_file(expath)
   			  @config.merge! exp["experiment"][env.to_s] if exp["experiment"][env.to_s].is_a? Hash
   			end
+  			@config.merge! @override_options if @override_options
   			@config.merge! parse(options)
   		end
       
@@ -176,11 +177,8 @@ module Experiment
 	          num += 1
 	          cl = value.class == Fixnum ? Integer : value.class;
 	          o.on("--#{key} VALUE", cl, "Default value #{value.inspect}") do |v| 
-	            if options.opts == ""
-	              options.opts = "#{key}: #{v}"
-	            else
-	              options.opts += ", #{key}: #{v}"
-              end
+	            @override_options ||= {}
+	            @override_options[key] = v
             end
           end
         end
