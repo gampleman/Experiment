@@ -24,7 +24,7 @@ module Experiment
         @previous_time = @start_time
         @growl = growl
         @mode = mode
-        show if @mode == :normal
+        show if @mode == :normal && @out
       end
     
       # Called when starting work on a particular experiment

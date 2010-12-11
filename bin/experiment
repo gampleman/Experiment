@@ -55,7 +55,7 @@ class App
       @opts = OptionParser.new 
       @opts.on('-v', '--version')    { output_version ; exit 0 }
       @opts.on('-h', '--help')       { output_help }
-      @opts.on('-V', '--verbose')    { @options.verbose = true }  
+      @opts.on('-V', '--verbose')    { @options.verbose = true; @options.summary = true }  
       @opts.on('-q', '--quiet')      { @options.quiet = true }
 			@opts.on('-e', '--env [ENV]', [:development, :compute], "Sets the environment to run in.")	{ |v| @options.env = v }
 			

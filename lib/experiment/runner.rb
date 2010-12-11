@@ -138,7 +138,7 @@ module Experiment
 		    Notify::done
 		    return true
   	  else
-  	    Notify::init @arguments.length * @options.cv, STDOUT, Experiment::Config::get(:growl_notifications, true)
+  	    Notify::init @arguments.length * @options.cv, @options.quiet ? false : STDERR, Experiment::Config::get(:growl_notifications, !@options.quiet)
 			  @arguments.each do |exp|
   			  require "./experiments/#{exp}/#{exp}"
   			  cla = eval(as_class_name(exp))
