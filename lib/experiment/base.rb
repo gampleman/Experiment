@@ -89,10 +89,18 @@ module Experiment
   		@cvs.times do |cv_num|
   			@bm = []
   			@current_cv = cv_num
-  			File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
-  			  @ouptut_file = output
-  			    run_the_experiment
-  			end
+  			begin
+  			  File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
+    			  @ouptut_file = output
+    			    run_the_experiment
+    			end
+    		rescue Exception => e
+    		  File.open(@dir + "/error.log", "a") do |f|
+    		     f.puts e.message
+    		     f.puts e.backtrace.join("\n")
+  		    end
+    		  raise e
+  		  end
   			array_merge @results, analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt")
   			write_performance!
   			Notify.cv_done @experiment, cv_num
