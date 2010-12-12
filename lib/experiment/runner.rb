@@ -66,6 +66,7 @@ module Experiment
     end
     
     # Lists available experiments
+    # @deprecated Will be removed in next version.
 		def list
 		  puts "Available experiments:"
 		  puts "  " + Dir["./experiments/*"].map{|a| File.dirname(a) }.join(", ")
@@ -203,6 +204,13 @@ module Experiment
         end
       end
 	  end
+	  
+	  # Runs a simple web app to view experimental results.
+	  # Requires sinatra (`gem install sinatra`).
+	  # Should be accessible on http://localhost:4567/.
+	  def view
+	    `ruby #{File.dirname(__FILE__) + "/viewer/viewer.rb"}`
+    end
 		
 		
 		
