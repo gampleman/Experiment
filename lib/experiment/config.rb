@@ -99,8 +99,8 @@ module Experiment
   		#   @param [Hash] interpolations key will be replaced by value.
   		# @example
   		#   Config.get :existing                   #=> "hello :what"
-  		#   Config.get :non_existent, "hello"      #=> "hello"
   		#   Config.get :exisitng, :what => "world" #=> "hello world"
+  		#   Config.get :non_existent, "hello" # => "hello"
   		def get(v, *opts)
   		  @used ||= []
         @used << v.to_s
@@ -155,7 +155,7 @@ module Experiment
 	    # returns all Config values currently loaded
 	    # @return [Hash]
 	    def to_hash
-	      @used = @config.keys
+	      #@used = @config.keys
 	      @config
       end
 	    
