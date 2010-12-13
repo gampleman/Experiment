@@ -14,7 +14,8 @@ module Experiment
   # @see https://github.com/gampleman/Experiment/wiki/Designing-your-experiment
   class Base
     
-    @@cleanup_raw_files = false
+    @@after_callbacks = []
+    @@directory_name = ":name-cv:cvs-:short_timestamp"
     
     # The directory in which the results will be written to.  
     attr_reader :dir
@@ -68,14 +69,22 @@ module Experiment
     
     # Sets up actions to do after the task is completed.
     #
-    # This will be expanded in the future. Currently the only
-    # possible usage is with :delete_raw_files
+    # This can be any method name. We provide the {delete_raw_files}
+    # method which is designed to be usefull, but you can do any 
+    # postprocessing you wish.
     # @example
     #   after_completion :delete_raw_files
-    # @param [:delete_raw_files] args If called will delete the raw-*.txt files
+    # @param [Symbol] args If called will delete the raw-*.txt files
     #   in the {dir} after the experiment successfully completes.
     def self.after_completion(*args)
-      @@cleanup_raw_files = args.include? :delete_raw_files
+      @@after_callbacks += args
+    end
+    
+    # Allows to change the naming convention for naming result directories.
+    #
+    # Supports some interpolations. Not yet stable (=use with caution).
+    def self.directory_name(name)
+      @@directory_name = name
     end
     
     # runs the whole experiment, called by the framework
@@ -108,7 +117,7 @@ module Experiment
   		summarize_performance!
   		summarize_results! @results
   		specification!
-  		cleanup!
+  		execute_after_callbacks!
   		Notify.completed @experiment
   		puts File.read(@dir + "/summary.mmd") if @options.summary
   	end
@@ -155,8 +164,13 @@ module Experiment
   	  @bm ||= []
   	  @bm << Benchmark.measure("CV #{@current_cv} #{label}", &block)
   	end
-
-  	
+    
+    # Deletes the raw-*.txt files generated through measurments.
+    # @example Usage
+    #   after_completion :delete_raw_files
+  	def delete_raw_files
+	    FileUtils.rm Dir[@dir + "/raw-*.txt"]
+    end
     
     
     # creates a summary of the results and writes to 'summary.mmd'
@@ -279,12 +293,11 @@ module Experiment
   	  @data
   	end
   	
-  	# Performs cleanup tasks
-  	def cleanup!
-  	  if @@cleanup_raw_files
-  	    FileUtils.rm Dir[@dir + "/raw-*.txt"]
-	    end
+  	# Executes any callbacks set up with `after_completion`
+  	def execute_after_callbacks!
+  	  @@after_callbacks.uniq.each {|callback| self.instance_eval &callback }
   	end
+  	
   	
   	
   	

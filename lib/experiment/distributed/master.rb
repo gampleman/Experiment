@@ -51,7 +51,7 @@ module Experiment
         specification! true
         summarize_performance!
     		summarize_results! @results
-    		cleanup!
+    		execute_after_callbacks!
     		Notify.completed @experiment
 
     		#sleep 1
