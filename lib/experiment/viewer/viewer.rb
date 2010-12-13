@@ -46,7 +46,12 @@ module Experiment
       def error
         "<h2>Experiment ended with exception</h2><pre>#{File.read("./results/#{name}/error.log")}</pre>" if @files.include?("error.log")
       end
-
+      
+      def performance
+        return unless @files.include?("performance_table.txt")
+        File.read("./results/#{name}/performance_table.txt")
+      end
+      
     end
     
   end
@@ -96,12 +101,26 @@ __END__
         -webkit-box-orient: horizontal;
         -webkit-box-direction: reverse;
         -webkit-box-pack: start;
-        background: rgba(120, 120, 120, 1);
+        
         text-shadow: 0 -1px 0 rgba(255,255,255,0.2);
     }
-    article { -webkit-box-flex: 1; } 
+    article { 
+      -webkit-box-flex: 1; 
+      background-image: 
+        -webkit-gradient(radial, 50% 0, 0, 50% 150, 200,
+          color-stop(0.0, rgba(200,200,200, 0.1)),
+          color-stop(1.0, rgba(200,200,200, 1))
+        ),
+        -webkit-gradient(linear, 0% 0%, 60% 650,
+          color-stop(0.3999, rgba(230,230,230, 1)),
+          color-stop(0.4, rgba(200,200,200, 1))
+        );
+    } 
     nav ul li { list-style-type: none; }
-    nav {  -webkit-box-shadow: 1px 0 5px rgba(0,0,0,0.2); }
+    nav {  
+      -webkit-box-shadow: 1px 0 5px rgba(0,0,0,0.2);
+      background: rgba(120, 120, 120, 1);
+   }
     nav a {
         display: block;
         padding: 4px 20px 4px 10px;
@@ -127,10 +146,10 @@ __END__
         background: -webkit-gradient(linear, center top, center bottom, color-stop(0.0, rgba(190, 190, 200, 1)), color-stop(1.0, rgba(140, 140, 150, 1)));
     }
     h1 {
-        background: -webkit-gradient(linear, center top, center bottom, color-stop(0.0, #222d41), color-stop(1.0, #151a24));
+        background: -webkit-gradient(linear, center top, center bottom, color-stop(0.0, #222d41), color-stop(1.0, rgba(21,26,36,0.9))); /*#151a24*/
         padding: 15px;
         color: white;
-        -webkit-box-shadow: 0 1px 0 rgba(255,255,255,0.1), 0 1px 10px rgba(255,255,255,0.6);
+        -webkit-box-shadow: 0 1px 0 rgba(255,255,255,0.2), 0 1px 10px rgba(255,255,255,0.8);
     }
     h1 span {
         background: -webkit-gradient(linear, center top, center bottom, color-stop(0.0, #fff), color-stop(1.0, rgb(200,200,200)));
@@ -138,8 +157,8 @@ __END__
         display: block;
         color: transparent; 
     }
-    h2 { margin: 20px; }
-    article a {
+    h2, p { margin: 20px; }
+    article>h1+p>a {
         color: red;
         position: absolute;
         text-shadow: 0 1px 0 rgba(0,0,0,0.4);
@@ -164,6 +183,17 @@ __END__
         background: rgba(0,0,0,0.1);
         padding: 5px;
     }
+    #retest {
+      /*display:none;*/
+      height: 0;
+      overflow: hidden;
+      -webkit-transition: height 0.5s;
+
+    }
+    #retest:target {
+      display: block;
+      height: 160px;
+    }
     </style>
 </head>
 <body>
@@ -171,13 +201,19 @@ __END__
 <article>
     <h1><span><%= @experiment.name %></span></h1>
     <p><a href="/destroy/<%= @experiment.name %>" onclick="return confirm('Are you sure?')">Delete this result</a></p>
+    
     <% if spec = @experiment.spec %>
     <h2>Specification</h2>
+    <p><a href="#retest">Retest</a></p>
     <%= tabulate(spec) { |k,v| k == :configuration ? tabulate(v){|k,v| v } : v.inspect }%>
-    <h2>Retest</h2>
-    <pre>
+    
+    <section id="retest">
+      <h2>Retest</h2>
+      <pre>
 experiment run <%=spec[:name]%> --cv <%=spec[:cross_validations]%> <%spec[:configuration].each do |k,v|%>--<%=k%> <%=v.inspect%> <%end%>
-    </pre>
+      </pre>
+    </section>
+    
     <% end %>
 
     <% if results = @experiment.results %>
@@ -218,6 +254,12 @@ experiment run <%=spec[:name]%> --cv <%=spec[:cross_validations]%> <%spec[:confi
     </table>
     <% end %>
     <%= @experiment.error %>
+    <% if perf = @experiment.performance %>
+    <h2>Performance table</h2>
+    <pre>
+<%=perf%>
+    </pre>
+    <%end%>
 </article>
 <nav>
     <ul>
