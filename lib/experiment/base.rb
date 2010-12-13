@@ -98,18 +98,7 @@ module Experiment
   		@cvs.times do |cv_num|
   			@bm = []
   			@current_cv = cv_num
-  			begin
-  			  File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
-    			  @ouptut_file = output
-    			    run_the_experiment
-    			end
-    		rescue Exception => e
-    		  File.open(@dir + "/error.log", "a") do |f|
-    		     f.puts e.message
-    		     f.puts e.backtrace.join("\n")
-  		    end
-    		  raise e
-  		  end
+  			execute_experiment!
   			array_merge @results, analyze_result!(@dir + "/raw-#{cv_num}.txt", @dir + "/analyzed-#{cv_num}.txt")
   			write_performance!
   			Notify.cv_done @experiment, cv_num
@@ -218,10 +207,37 @@ module Experiment
   	
   	protected
   	
+  	# Wraps output opening and error handling
+  	def execute_experiment!
+  	  begin
+			  File.open(@dir + "/raw-#{cv_num}.txt", "w") do |output|
+  			  @ouptut_file = output
+  			  run_the_experiment
+  			end
+  		rescue Exception => e
+  		  File.open(@dir + "/error.log", "a") do |f|
+  		     f.puts e.message
+  		     f.puts e.backtrace.join("\n")
+		    end
+  		  raise e
+		  end
+	  end
+  	
+  	
   	# Creates the results directory for the current experiment
   	def write_dir!
-  		@dir = "./results/#{@experiment}-cv#{@cvs}-#{Time.now.to_i.to_s[4..9]}"
-  		Dir.mkdir @dir
+      interpolations = {
+        :name => @experiment,
+        :cvs => @cvs,
+        :short_timestamp => Time.now.to_i.to_s[4..9],
+        :timestamp => Time.now.to_i,
+        :env => @options.env
+      }.merge Experiment::Config.to_hash
+  	  name = interpolations.keys.reduce(@@directory_name) do |result, inter|
+        result.gsub /:#{inter}/, interpolations[inter].to_s
+      end
+  		@dir = "./results/#{name}"
+  		FileUtils.mkdir_p @dir
   	end
     
     # Writes a yaml specification of all the options used to run the experiment

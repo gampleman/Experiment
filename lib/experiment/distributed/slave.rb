@@ -15,10 +15,7 @@ module Experiment
           @dir = work[:dir]
           @data = work[:input]
           #@data = work[:input]
-          File.open(@dir + "/raw-#{@current_cv}.txt", "w") do |output|
-    			  @ouptut_file = output
-    			  run_the_experiment
-    			end
+          execute_experiment!
     			result = analyze_result!(@dir + "/raw-#{@current_cv}.txt", @dir + "/analyzed-#{@current_cv}.txt")
     			write_performance!
     			@master.submit_result @current_cv, result, @abm.first
